@@ -377,7 +377,7 @@ canvas { margin: 12px 0; max-height: 320px; }
   box-shadow: 0 12px 48px rgba(0, 0, 0, .45);
   animation: pop .18s ease;
 }
-.modal p { font-size: 17px; line-height: 1.4; margin-bottom: 22px; text-align: center; }
+.modal p { font-size: 17px; line-height: 1.4; margin-bottom: 22px; text-align: center; white-space: pre-line; }
 .modal-botones { display: flex; gap: 12px; }
 .modal-botones button { flex: 1; margin-top: 0; }
 

@@ -735,20 +735,37 @@ fileRestore.addEventListener('change', () => {
 // ===== INSTALAR APP (feature 9) =====
 let promptInstalar = null;
 const btnInstalar = document.getElementById('btn-instalar');
+
+// Si ya está instalada y abierta como app, no tiene sentido el botón.
+const yaInstalada = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+if (!yaInstalada) btnInstalar.style.display = '';
+
+// Chrome avisa cuando la app se puede instalar de un solo toque.
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   promptInstalar = e;
   btnInstalar.style.display = '';
 });
+
 btnInstalar.addEventListener('click', async () => {
-  if (!promptInstalar) {
-    toast('En tu navegador: menú ⋮ → "Instalar app" / "Agregar a inicio"');
+  // Camino fácil: instalación de un toque (cuando el navegador lo permite).
+  if (promptInstalar) {
+    promptInstalar.prompt();
+    const { outcome } = await promptInstalar.userChoice;
+    promptInstalar = null;
+    if (outcome === 'accepted') btnInstalar.style.display = 'none';
     return;
   }
-  promptInstalar.prompt();
-  await promptInstalar.userChoice;
-  promptInstalar = null;
-  btnInstalar.style.display = 'none';
+  // Si no, explicamos cómo hacerlo a mano según el navegador.
+  abrirConfirm(
+    'Para tenerla como app en tu celular:\n\n' +
+    '1) Abrí esta página en Chrome\n' +
+    '2) Tocá el menú ⋮ (arriba a la derecha)\n' +
+    '3) Elegí "Agregar a la pantalla principal"\n\n' +
+    '¡Listo! Queda con su ícono junto a tus otras apps.',
+    null,
+    true
+  );
 });
 window.addEventListener('appinstalled', () => { btnInstalar.style.display = 'none'; });
 
@@ -757,9 +774,12 @@ const modalOverlay = document.getElementById('modal-overlay');
 const modalMensaje = document.getElementById('modal-mensaje');
 let modalAccion = null;
 
-function abrirConfirm(mensaje, onSi) {
+function abrirConfirm(mensaje, onSi, soloInfo) {
   modalMensaje.textContent = mensaje;
   modalAccion = onSi;
+  // soloInfo = aviso de una sola opción ("Entendido"), sin pregunta Sí/No.
+  document.getElementById('modal-no').style.display = soloInfo ? 'none' : '';
+  document.getElementById('modal-si').textContent = soloInfo ? 'Entendido' : 'Sí';
   modalOverlay.style.display = 'flex';
 }
 function cerrarConfirm() {
