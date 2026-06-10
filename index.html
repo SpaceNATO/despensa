@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#2563eb" />
+  <title>Mi Despensa</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="stylesheet" href="styles.css?v=7" />
+</head>
+<body>
+  <header>
+    <button id="btn-ajustes" title="Ajustes" aria-label="Ajustes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94a7.07 7.07 0 0 0 .05-.94 7.07 7.07 0 0 0-.05-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54A.48.48 0 0 0 13.93 2h-3.86a.48.48 0 0 0-.48.41l-.36 2.54a7.3 7.3 0 0 0-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.71 8.47a.49.49 0 0 0 .12.61l2.03 1.98a7.07 7.07 0 0 0-.05.94 7.07 7.07 0 0 0 .05.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32a.49.49 0 0 0 .59.22l2.39-.96a7.3 7.3 0 0 0 1.62.94l.36 2.54a.48.48 0 0 0 .48.41h3.86a.48.48 0 0 0 .48-.41l.36-2.54a7.3 7.3 0 0 0 1.62-.94l2.39.96a.49.49 0 0 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61zM12 15.6A3.6 3.6 0 1 1 15.6 12 3.6 3.6 0 0 1 12 15.6z"/></svg></button>
+    <h1>Mi Despensa</h1>
+    <button id="btn-tema" title="Cambiar tema" aria-label="Cambiar tema"></button>
+  </header>
+
+  <main>
+    <!-- ====== CARGAR ====== -->
+    <section id="tab-cargar" class="tab active">
+      <div id="alerta-prediccion" class="alerta" style="display:none"></div>
+
+      <form id="form-cargar" autocomplete="off" novalidate>
+        <div class="field">
+          <label for="producto">Producto</label>
+          <div class="autocomplete">
+            <input id="producto" name="producto" placeholder="Ej: Leche" autocomplete="off" required />
+            <div id="sugerencias" class="sugerencias" hidden></div>
+          </div>
+        </div>
+        <div class="row row-datos">
+          <div class="field campo-cantidad">
+            <label for="cantidad">Cantidad</label>
+            <div class="grupo-cantidad">
+              <input id="cantidad" name="cantidad" type="number" step="any" min="0" value="1" required />
+              <select id="unidad" name="unidad" aria-label="Unidad">
+                <option value="u">un.</option>
+                <option value="L">L</option>
+                <option value="kg">kg</option>
+                <option value="g">g</option>
+                <option value="ml">ml</option>
+                <option value="rollo">rollos</option>
+                <option value="paquete">paq.</option>
+              </select>
+            </div>
+          </div>
+          <div class="field campo-categoria">
+            <label for="categoria">Categoría</label>
+            <select id="categoria" name="categoria">
+              <option value="Almacén">Almacén</option>
+              <option value="Lácteos">Lácteos</option>
+              <option value="Frutas y verduras">Frutas y verduras</option>
+              <option value="Carnes">Carnes</option>
+              <option value="Limpieza">Limpieza</option>
+              <option value="Higiene">Higiene</option>
+              <option value="Bebidas">Bebidas</option>
+              <option value="Otros">Otros</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">Agregar</button>
+      </form>
+
+      <h3>Rápido</h3>
+      <div id="botones-rapidos" class="chips"></div>
+
+      <h3>Últimos cargados</h3>
+      <ul id="ultimos" class="lista-items"></ul>
+    </section>
+
+    <!-- ====== LISTA ====== -->
+    <section id="tab-lista" class="tab">
+      <p class="hint">Lo que consumiste desde la última compra, más lo que tiene poco stock.</p>
+      <ul id="lista-compras" class="lista-items"></ul>
+      <button id="btn-confirmar" class="btn-primary">Confirmar compra</button>
+      <div class="row">
+        <button id="btn-whatsapp" class="btn-secundario"><span data-ico="chat"></span> Enviar por WhatsApp</button>
+        <button id="btn-copiar" class="btn-secundario"><span data-ico="copiar"></span> Copiar</button>
+      </div>
+    </section>
+
+    <!-- ====== STOCK ====== -->
+    <section id="tab-stock" class="tab">
+      <p class="hint">Cuánto tenés en casa. Baja solo cuando anotás consumo. Si cae por debajo del mínimo, salta a la lista.</p>
+      <ul id="lista-stock" class="lista-items"></ul>
+    </section>
+
+    <!-- ====== HISTORIAL ====== -->
+    <section id="tab-historial" class="tab">
+      <div class="row">
+        <div class="field">
+          <label for="ver-por">Ver por</label>
+          <select id="ver-por">
+            <option value="categoria">Categoría</option>
+            <option value="producto">Producto</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="filtro-historial">Buscar</label>
+          <input id="filtro-historial" placeholder="Filtrar..." />
+        </div>
+      </div>
+      <canvas id="grafico-mes"></canvas>
+      <h3>Detalle por mes</h3>
+      <div id="tabla-historial"></div>
+
+      <h3>Datos y respaldo</h3>
+      <div class="acciones-datos">
+        <button id="btn-excel" class="dato-card"><span class="dato-icono" data-ico="planilla"></span><span>Exportar<br>a Excel</span></button>
+        <button id="btn-backup" class="dato-card"><span class="dato-icono" data-ico="descargar"></span><span>Descargar<br>respaldo</span></button>
+        <button id="btn-restore" class="dato-card"><span class="dato-icono" data-ico="subir"></span><span>Cargar<br>respaldo</span></button>
+      </div>
+      <input type="file" id="file-restore" accept=".json,application/json" hidden />
+      <button id="btn-instalar" class="btn-primary" style="display:none"><span data-ico="celular"></span> Instalar app</button>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button data-tab="cargar" class="active"><span class="tab-ico" data-ico="lapiz"></span><span>Cargar</span></button>
+    <button data-tab="lista"><span class="tab-ico" data-ico="carrito"></span><span>Lista</span></button>
+    <button data-tab="stock"><span class="tab-ico" data-ico="caja"></span><span>Stock</span></button>
+    <button data-tab="historial"><span class="tab-ico" data-ico="grafico"></span><span>Historial</span></button>
+  </nav>
+
+  <!-- Panel de ajustes -->
+  <div id="ajustes-overlay" class="modal-overlay" style="display:none">
+    <div class="modal ajustes" role="dialog" aria-modal="true">
+      <h2>Ajustes</h2>
+      <h3>Color principal</h3>
+      <div class="colores" id="colores-presets"></div>
+      <label class="color-custom">
+        <span>Otro color a elección</span>
+        <input type="color" id="color-custom" />
+      </label>
+      <h3>Color de fondo</h3>
+      <div class="colores" id="fondos-presets"></div>
+      <label class="color-custom">
+        <span>Otro fondo a elección</span>
+        <input type="color" id="fondo-custom" />
+      </label>
+      <h3>Color de letra</h3>
+      <div class="colores" id="letras-presets"></div>
+      <label class="color-custom">
+        <span>Otra letra a elección</span>
+        <input type="color" id="letra-custom" />
+      </label>
+      <button id="ajustes-cerrar" class="btn-primary">Listo</button>
+    </div>
+  </div>
+
+  <!-- Cuadro de confirmación (oscurece la pantalla y pregunta Sí/No) -->
+  <div id="modal-overlay" class="modal-overlay" style="display:none">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-mensaje">
+      <p id="modal-mensaje">¿Estás seguro?</p>
+      <div class="modal-botones">
+        <button id="modal-no" class="btn-secundario">No</button>
+        <button id="modal-si" class="btn-primary">Sí</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="app.js?v=7"></script>
+</body>
+</html>

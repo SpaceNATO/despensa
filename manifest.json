@@ -1,0 +1,17 @@
+{
+  "name": "Mi Despensa",
+  "short_name": "Despensa",
+  "description": "Anotá lo que consumís y generá tu lista de compras.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
