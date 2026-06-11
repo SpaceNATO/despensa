@@ -937,15 +937,22 @@ function letraEfectiva() {
 // color=null vuelve al automático (lo que trae el tema claro/oscuro)
 function aplicarFondo(color) {
   if (!color) {
-    ['--bg', '--bg-elev', '--gris', '--borde'].forEach(v => RAIZ.removeProperty(v));
+    ['--bg', '--bg-elev', '--card', '--nav-bg', '--gris', '--borde', '--dot'].forEach(v => RAIZ.removeProperty(v));
     localStorage.removeItem('despensa_fondo');
   } else {
     const claro = esClaro(color);
+    // Tarjetas/barras: tinte claro del MISMO fondo (antes quedaban blancas)
+    const elev = claro ? mezclar(color, '#ffffff', 0.5) : mezclar(color, '#ffffff', 0.07);
     RAIZ.setProperty('--bg', color);
-    // Derivados: tarjetas, fondos suaves y bordes que combinen con el fondo elegido
-    RAIZ.setProperty('--bg-elev', claro ? mezclar(color, '#ffffff', 0.5) : mezclar(color, '#ffffff', 0.07));
+    RAIZ.setProperty('--bg-elev', elev);
+    RAIZ.setProperty('--card', elev);
+    RAIZ.setProperty('--nav-bg', claro ? mezclar(color, '#ffffff', 0.62) : mezclar(color, '#ffffff', 0.12));
     RAIZ.setProperty('--gris', claro ? mezclar(color, '#000000', 0.05) : mezclar(color, '#ffffff', 0.08));
     RAIZ.setProperty('--borde', claro ? mezclar(color, '#000000', 0.11) : mezclar(color, '#ffffff', 0.17));
+    // Puntitos del confeti: el mismo tono del fondo, apenas más claro (si el
+    // fondo es oscuro) o un poco más intenso (si es claro), para que siempre
+    // se noten y combinen con el color elegido.
+    RAIZ.setProperty('--dot', claro ? mezclar(color, '#000000', 0.07) : mezclar(color, '#ffffff', 0.16));
     localStorage.setItem('despensa_fondo', color);
   }
   aplicarLetraGuardada(); // el gris de los textos secundarios depende del fondo
@@ -969,6 +976,120 @@ function aplicarFondoGuardado() {
   if (c) aplicarFondo(c); else aplicarLetraGuardada();
 }
 
+// ===== Rueda selectora de color (tono + saturación + brillo hasta el negro) =====
+const ruedaOverlay = document.getElementById('rueda-overlay');
+const ruedaCanvas = document.getElementById('rueda-canvas');
+const ruedaMarker = document.getElementById('rueda-marker');
+const ruedaOscuro = document.getElementById('rueda-oscuro');
+const ruedaBrillo = document.getElementById('rueda-brillo');
+const ruedaPreview = document.getElementById('rueda-preview');
+let ruedaH = 0, ruedaS = 1, ruedaV = 1, ruedaOnElegir = null, ruedaLista = false;
+
+function hsv2rgb(h, s, v) {
+  const c = v * s;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = v - c;
+  let r = 0, g = 0, b = 0;
+  if (h < 60) { r = c; g = x; }
+  else if (h < 120) { r = x; g = c; }
+  else if (h < 180) { g = c; b = x; }
+  else if (h < 240) { g = x; b = c; }
+  else if (h < 300) { r = x; b = c; }
+  else { r = c; b = x; }
+  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+}
+function rgb2hsv(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60; if (h < 0) h += 360;
+  }
+  return [h, max ? d / max : 0, max];
+}
+function hex2rgb(hex) {
+  const n = hex.replace('#', '');
+  return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
+}
+function rgb2hex(r, g, b) {
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+// Dibuja la rueda una sola vez: tono por ángulo, saturación por radio (a brillo full)
+function dibujarRueda() {
+  const ctx = ruedaCanvas.getContext('2d');
+  const w = ruedaCanvas.width, r = w / 2;
+  const img = ctx.createImageData(w, w);
+  for (let y = 0; y < w; y++) {
+    for (let x = 0; x < w; x++) {
+      const dx = x - r, dy = y - r;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const i = (y * w + x) * 4;
+      if (dist <= r) {
+        let h = Math.atan2(dy, dx) * 180 / Math.PI; if (h < 0) h += 360;
+        const [R, G, B] = hsv2rgb(h, Math.min(1, dist / r), 1);
+        img.data[i] = R; img.data[i + 1] = G; img.data[i + 2] = B;
+        img.data[i + 3] = dist > r - 1.2 ? Math.max(0, r - dist + 1.2) * 212 : 255;
+      } else { img.data[i + 3] = 0; }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  ruedaLista = true;
+}
+
+// Refresca preview, capa oscura, slider y marcador según H/S/V actuales
+function ruedaActualizar() {
+  const hex = rgb2hex(...hsv2rgb(ruedaH, ruedaS, ruedaV));
+  ruedaPreview.style.background = hex;
+  ruedaOscuro.style.opacity = (1 - ruedaV).toFixed(3);
+  ruedaBrillo.style.setProperty('--rueda-tono', rgb2hex(...hsv2rgb(ruedaH, ruedaS, 1)));
+  const r = ruedaCanvas.width / 2;
+  const ang = ruedaH * Math.PI / 180;
+  ruedaMarker.style.left = (r + Math.cos(ang) * ruedaS * r) + 'px';
+  ruedaMarker.style.top = (r + Math.sin(ang) * ruedaS * r) + 'px';
+  return hex;
+}
+
+function ruedaDesdePunto(clientX, clientY) {
+  const rect = ruedaCanvas.getBoundingClientRect();
+  const r = ruedaCanvas.width / 2;
+  const dx = (clientX - rect.left) * (ruedaCanvas.width / rect.width) - r;
+  const dy = (clientY - rect.top) * (ruedaCanvas.height / rect.height) - r;
+  let h = Math.atan2(dy, dx) * 180 / Math.PI; if (h < 0) h += 360;
+  ruedaH = h;
+  ruedaS = Math.min(1, Math.sqrt(dx * dx + dy * dy) / r);
+  ruedaActualizar();
+}
+
+let ruedaArrastrando = false;
+ruedaCanvas.addEventListener('pointerdown', (e) => {
+  ruedaArrastrando = true; ruedaCanvas.setPointerCapture(e.pointerId); ruedaDesdePunto(e.clientX, e.clientY);
+});
+ruedaCanvas.addEventListener('pointermove', (e) => { if (ruedaArrastrando) ruedaDesdePunto(e.clientX, e.clientY); });
+ruedaCanvas.addEventListener('pointerup', () => { ruedaArrastrando = false; });
+ruedaBrillo.addEventListener('input', () => { ruedaV = ruedaBrillo.value / 100; ruedaActualizar(); });
+
+function abrirRueda(colorInicial, onElegir) {
+  if (!ruedaLista) dibujarRueda();
+  ruedaOnElegir = onElegir;
+  const [h, s, v] = rgb2hsv(...hex2rgb(colorInicial));
+  ruedaH = h; ruedaS = s; ruedaV = v;
+  ruedaBrillo.value = Math.round(v * 100);
+  ruedaActualizar();
+  ruedaOverlay.style.display = 'flex';
+}
+function cerrarRueda() { ruedaOverlay.style.display = 'none'; ruedaOnElegir = null; }
+document.getElementById('rueda-cancelar').addEventListener('click', cerrarRueda);
+document.getElementById('rueda-usar').addEventListener('click', () => {
+  const hex = ruedaActualizar();
+  if (ruedaOnElegir) ruedaOnElegir(hex);
+  cerrarRueda();
+});
+ruedaOverlay.addEventListener('click', (e) => { if (e.target === ruedaOverlay) cerrarRueda(); });
+
 // ----- Panel de ajustes (bottom sheet) -----
 const ajustesOverlay = document.getElementById('ajustes-overlay');
 
@@ -987,16 +1108,14 @@ function renderSwatches(contId, lista, actual, onPick) {
     b.addEventListener('click', () => { onPick(x.c); renderAjustes(); });
     cont.appendChild(b);
   });
-  // Botón "+" para un color a elección
-  const add = document.createElement('label');
+  // Botón "+" que abre la rueda selectora de color
+  const add = document.createElement('button');
+  add.type = 'button';
   add.className = 'swatch-add';
-  add.title = 'Otro color a elección';
+  add.title = 'Elegir un color con la rueda';
   add.textContent = '+';
-  const inp = document.createElement('input');
-  inp.type = 'color';
-  inp.value = /^#[0-9a-f]{6}$/i.test(actual || '') ? actual : '#ffffff';
-  inp.addEventListener('input', (e) => { onPick(e.target.value); renderAjustes(); });
-  add.appendChild(inp);
+  const inicial = /^#[0-9a-f]{6}$/i.test(actual || '') ? actual : '#ff0000';
+  add.addEventListener('click', () => abrirRueda(inicial, (hex) => { onPick(hex); renderAjustes(); }));
   cont.appendChild(add);
 }
 
@@ -1006,6 +1125,7 @@ function renderAjustes() {
     aplicarColor(c, preset ? preset.o : undefined);
   });
   renderSwatches('set-fondo', FONDOS, fondoEfectivo(), aplicarFondo);
+  renderSwatches('set-texto', LETRAS, letraEfectiva(), aplicarLetra);
   const oscuro = temaActual() === 'dark';
   document.getElementById('modo-claro').classList.toggle('activo', !oscuro);
   document.getElementById('modo-oscuro').classList.toggle('activo', oscuro);

@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="styles.css?v=9" />
+  <link rel="stylesheet" href="styles.css?v=10" />
 </head>
 <body>
   <header>
@@ -152,6 +152,11 @@
       </div>
 
       <div class="ajuste-seccion">
+        <h3>Color de texto</h3>
+        <div class="swatches" id="set-texto"></div>
+      </div>
+
+      <div class="ajuste-seccion">
         <h3>Modo</h3>
         <div class="modo-botones">
           <button type="button" id="modo-claro" class="modo-btn"><span data-ico="sol" aria-hidden="true"></span> Claro</button>
@@ -160,6 +165,30 @@
       </div>
 
       <button id="ajustes-cerrar" class="btn-primary">Listo</button>
+    </div>
+  </div>
+
+  <!-- Rueda selectora de color (tono + saturación + oscuridad hasta el negro) -->
+  <div id="rueda-overlay" class="modal-overlay" style="display:none">
+    <div class="modal rueda-modal" role="dialog" aria-modal="true">
+      <p class="rueda-titulo">Elegí tu color</p>
+      <div class="rueda-wrap">
+        <canvas id="rueda-canvas" width="240" height="240"></canvas>
+        <div id="rueda-oscuro"></div>
+        <div id="rueda-marker"></div>
+      </div>
+      <div class="rueda-brillo-fila">
+        <span data-ico="luna" aria-hidden="true"></span>
+        <input type="range" id="rueda-brillo" min="0" max="100" value="100" aria-label="Oscuridad" />
+        <span data-ico="sol" aria-hidden="true"></span>
+      </div>
+      <div class="rueda-pie">
+        <span id="rueda-preview"></span>
+        <div class="rueda-botones">
+          <button type="button" id="rueda-cancelar" class="btn-secundario">Cancelar</button>
+          <button type="button" id="rueda-usar" class="btn-primary">Usar color</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -176,6 +205,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

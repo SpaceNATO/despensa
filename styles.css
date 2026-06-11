@@ -55,15 +55,15 @@ body::before {
   z-index: -1;
   background-color: var(--bg);
   background-image:
-    radial-gradient(circle at 28px 34px, var(--dot) 0 3px, transparent 4px),
-    radial-gradient(circle at 122px 26px, var(--dot) 0 5px, transparent 6px),
-    radial-gradient(circle at 174px 88px, var(--dot) 0 2px, transparent 3px),
-    radial-gradient(circle at 58px 108px, var(--dot) 0 4px, transparent 5px),
-    radial-gradient(circle at 18px 168px, var(--dot) 0 3px, transparent 4px),
-    radial-gradient(circle at 150px 172px, var(--dot) 0 3px, transparent 4px),
-    radial-gradient(circle at 98px 78px, var(--dot) 0 2px, transparent 3px),
-    radial-gradient(circle at 188px 138px, var(--dot) 0 5px, transparent 6px);
-  background-size: 210px 210px;
+    radial-gradient(circle at 30px 36px, var(--dot) 0 4.5px, transparent 5.5px),
+    radial-gradient(circle at 126px 28px, var(--dot) 0 6.5px, transparent 7.5px),
+    radial-gradient(circle at 178px 92px, var(--dot) 0 3.5px, transparent 4.5px),
+    radial-gradient(circle at 60px 112px, var(--dot) 0 5.5px, transparent 6.5px),
+    radial-gradient(circle at 20px 172px, var(--dot) 0 4.5px, transparent 5.5px),
+    radial-gradient(circle at 154px 176px, var(--dot) 0 4.5px, transparent 5.5px),
+    radial-gradient(circle at 100px 80px, var(--dot) 0 3.5px, transparent 4.5px),
+    radial-gradient(circle at 192px 142px, var(--dot) 0 6.5px, transparent 7.5px);
+  background-size: 220px 220px;
   background-repeat: repeat;
 }
 
@@ -549,5 +549,65 @@ canvas { margin: 12px 0; max-height: 320px; }
   border-color: var(--accent); color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
+
+/* ===== Rueda selectora de color ===== */
+.rueda-modal { max-width: 320px; }
+.rueda-titulo { font-size: 17px; font-weight: 600; margin-bottom: 16px; text-align: center; }
+.rueda-wrap {
+  position: relative;
+  width: 240px; height: 240px;
+  margin: 0 auto 18px;
+  touch-action: none;
+}
+#rueda-canvas { display: block; border-radius: 50%; cursor: crosshair; }
+/* Capa negra que oscurece la rueda según el brillo elegido */
+#rueda-oscuro {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+#rueda-marker {
+  position: absolute;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, .4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  left: 50%; top: 50%;
+}
+.rueda-brillo-fila { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; color: var(--gris-osc); }
+.rueda-brillo-fila svg.ico { width: 18px; height: 18px; }
+#rueda-brillo {
+  flex: 1; width: auto; padding: 0; height: 22px;
+  -webkit-appearance: none; appearance: none; background: none; border: none;
+}
+#rueda-brillo::-webkit-slider-runnable-track {
+  height: 8px; border-radius: 5px;
+  background: linear-gradient(to right, #000, var(--rueda-tono, #888));
+}
+#rueda-brillo::-moz-range-track {
+  height: 8px; border-radius: 5px;
+  background: linear-gradient(to right, #000, var(--rueda-tono, #888));
+}
+#rueda-brillo::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; border: 1px solid rgba(0, 0, 0, .25);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .3); margin-top: -6px; cursor: pointer;
+}
+#rueda-brillo::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; border: 1px solid rgba(0, 0, 0, .25); cursor: pointer;
+}
+.rueda-pie { display: flex; align-items: center; gap: 12px; }
+#rueda-preview {
+  flex: none; width: 46px; height: 46px; border-radius: 12px;
+  border: 1px solid var(--borde); background: #888;
+}
+.rueda-botones { flex: 1; display: flex; gap: 10px; }
+.rueda-botones button { margin-top: 0; }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pop { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
