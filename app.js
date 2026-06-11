@@ -54,6 +54,10 @@ const ICONOS = {
   subir: 'M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z',
   celular: 'M17 1H7c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zm0 17H7V5h10v13zm-5-1.5l4-4-1.41-1.41L13 12.67V8h-2v4.67l-1.59-1.58L8 12.5l4 4z',
   check: 'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',
+  lupa: 'M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z',
+  mic: 'M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z',
+  mas: 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z',
+  ajuste: 'M19.14 12.94a7.07 7.07 0 0 0 .05-.94 7.07 7.07 0 0 0-.05-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54A.48.48 0 0 0 13.93 2h-3.86a.48.48 0 0 0-.48.41l-.36 2.54a7.3 7.3 0 0 0-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.71 8.47a.49.49 0 0 0 .12.61l2.03 1.98a7.07 7.07 0 0 0-.05.94 7.07 7.07 0 0 0 .05.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32a.49.49 0 0 0 .59.22l2.39-.96a7.3 7.3 0 0 0 1.62.94l.36 2.54a.48.48 0 0 0 .48.41h3.86a.48.48 0 0 0 .48-.41l.36-2.54a7.3 7.3 0 0 0 1.62-.94l2.39.96a.49.49 0 0 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61zM12 15.6A3.6 3.6 0 1 1 15.6 12 3.6 3.6 0 0 1 12 15.6z',
 };
 function icono(n) {
   return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONOS[n]}"/></svg>`;
@@ -269,6 +273,44 @@ inputProducto.addEventListener('keydown', (e) => {
   items.forEach((d, i) => d.classList.toggle('activa', i === sugIndex));
   if (items[sugIndex]) items[sugIndex].scrollIntoView({ block: 'nearest' });
 });
+
+// ----- Botones − / + de la cantidad -----
+const inputCantidad = document.getElementById('cantidad');
+function pasoCantidad(delta) {
+  const v = parseFloat(inputCantidad.value) || 0;
+  inputCantidad.value = Math.max(0, Math.round((v + delta) * 100) / 100);
+}
+document.getElementById('cant-menos').addEventListener('click', () => pasoCantidad(-1));
+document.getElementById('cant-mas').addEventListener('click', () => pasoCantidad(1));
+
+// ----- Dictado por voz (Chrome en Android lo soporta; donde no, avisa) -----
+const btnVoz = document.getElementById('btn-voz');
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SR) {
+  let rec = null, escuchando = false;
+  btnVoz.addEventListener('click', () => {
+    if (escuchando) { rec && rec.stop(); return; }
+    rec = new SR();
+    rec.lang = 'es-AR';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    rec.onresult = (e) => {
+      const texto = (e.results[0][0].transcript || '').trim();
+      if (texto) {
+        inputProducto.value = texto.charAt(0).toUpperCase() + texto.slice(1);
+        autocompletarProducto();
+        inputCantidad.focus();
+      }
+    };
+    rec.onerror = () => toast('No pude escuchar, probá de nuevo');
+    rec.onend = () => { escuchando = false; btnVoz.classList.remove('escuchando'); };
+    escuchando = true;
+    btnVoz.classList.add('escuchando');
+    rec.start();
+  });
+} else {
+  btnVoz.addEventListener('click', () => toast('Tu navegador no permite dictar por voz'));
+}
 
 function renderBotonesRapidos() {
   const cuenta = {};
@@ -618,10 +660,13 @@ function renderGrafico() {
     return;
   }
   canvas.style.display = '';
+  // La paleta arranca con el color de acento elegido por el usuario
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || PALETA[0];
+  const paleta = [accent, ...PALETA.filter(c => c.toLowerCase() !== accent.toLowerCase())];
   const datasets = Object.keys(series).map((clave, i) => ({
     label: clave,
     data: meses.map(m => series[clave][m] || 0),
-    backgroundColor: PALETA[i % PALETA.length],
+    backgroundColor: paleta[i % paleta.length],
   }));
   if (grafico) grafico.destroy();
   grafico = new Chart(canvas, {
@@ -828,8 +873,8 @@ function derivarOscuro(hex) {
 }
 
 function aplicarColor(color, oscuro) {
-  document.documentElement.style.setProperty('--azul', color);
-  document.documentElement.style.setProperty('--azul-osc', oscuro || derivarOscuro(color));
+  document.documentElement.style.setProperty('--accent', color);
+  document.documentElement.style.setProperty('--accent-osc', oscuro || derivarOscuro(color));
   localStorage.setItem('despensa_color', color);
   if (temaActual() === 'light') {
     const meta = document.querySelector('meta[name="theme-color"]');
@@ -924,36 +969,46 @@ function aplicarFondoGuardado() {
   if (c) aplicarFondo(c); else aplicarLetraGuardada();
 }
 
-// ----- Panel de ajustes -----
+// ----- Panel de ajustes (bottom sheet) -----
 const ajustesOverlay = document.getElementById('ajustes-overlay');
 
-// Dibuja una fila de circulitos de color. Con conAuto, el primero es "automático".
-function renderSwatches(contId, lista, actual, conAuto, onPick) {
+// Dibuja los primeros 6 colores de la lista como círculos de 24px,
+// más un botón "+" con selector de color nativo para elegir uno libre.
+function renderSwatches(contId, lista, actual, onPick) {
   const cont = document.getElementById(contId);
   const act = (actual || '').toLowerCase();
-  let html = conAuto
-    ? `<button type="button" class="auto ${!actual ? 'activo' : ''}" title="Automático (según el tema)"></button>`
-    : '';
-  html += lista.map(x =>
-    `<button type="button" title="${x.n}" data-c="${x.c}" style="background:${x.c}" class="${x.c.toLowerCase() === act ? 'activo' : ''}"></button>`
-  ).join('');
-  cont.innerHTML = html;
-  cont.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-    onPick(b.classList.contains('auto') ? null : b.dataset.c);
-    renderAjustes();
-  }));
+  cont.innerHTML = '';
+  lista.slice(0, 6).forEach(x => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'swatch' + (x.c.toLowerCase() === act ? ' activo' : '');
+    b.style.background = x.c;
+    b.title = x.n;
+    b.addEventListener('click', () => { onPick(x.c); renderAjustes(); });
+    cont.appendChild(b);
+  });
+  // Botón "+" para un color a elección
+  const add = document.createElement('label');
+  add.className = 'swatch-add';
+  add.title = 'Otro color a elección';
+  add.textContent = '+';
+  const inp = document.createElement('input');
+  inp.type = 'color';
+  inp.value = /^#[0-9a-f]{6}$/i.test(actual || '') ? actual : '#ffffff';
+  inp.addEventListener('input', (e) => { onPick(e.target.value); renderAjustes(); });
+  add.appendChild(inp);
+  cont.appendChild(add);
 }
 
 function renderAjustes() {
-  renderSwatches('colores-presets', COLORES, colorActual(), false, (c) => {
+  renderSwatches('set-principal', COLORES, colorActual(), (c) => {
     const preset = COLORES.find(x => x.c === c);
     aplicarColor(c, preset ? preset.o : undefined);
   });
-  renderSwatches('fondos-presets', FONDOS, localStorage.getItem('despensa_fondo'), true, aplicarFondo);
-  renderSwatches('letras-presets', LETRAS, localStorage.getItem('despensa_letra'), true, aplicarLetra);
-  document.getElementById('color-custom').value = colorActual();
-  document.getElementById('fondo-custom').value = fondoEfectivo();
-  document.getElementById('letra-custom').value = letraEfectiva();
+  renderSwatches('set-fondo', FONDOS, fondoEfectivo(), aplicarFondo);
+  const oscuro = temaActual() === 'dark';
+  document.getElementById('modo-claro').classList.toggle('activo', !oscuro);
+  document.getElementById('modo-oscuro').classList.toggle('activo', oscuro);
 }
 
 function abrirAjustes() {
@@ -965,25 +1020,15 @@ function cerrarAjustes() { ajustesOverlay.style.display = 'none'; }
 document.getElementById('btn-ajustes').addEventListener('click', abrirAjustes);
 document.getElementById('ajustes-cerrar').addEventListener('click', cerrarAjustes);
 // Tocar fuera del panel = cerrar, solo si el gesto EMPEZÓ sobre el fondo
-// (evita cierres falsos cuando se arrastra desde adentro o el clic que lo abrió)
 let ajustesDownEnFondo = false;
 ajustesOverlay.addEventListener('mousedown', (e) => { ajustesDownEnFondo = (e.target === ajustesOverlay); });
 ajustesOverlay.addEventListener('click', (e) => {
   if (e.target === ajustesOverlay && ajustesDownEnFondo) cerrarAjustes();
   ajustesDownEnFondo = false;
 });
-document.getElementById('color-custom').addEventListener('input', (e) => {
-  aplicarColor(e.target.value);
-  renderAjustes();
-});
-document.getElementById('fondo-custom').addEventListener('input', (e) => {
-  aplicarFondo(e.target.value);
-  renderAjustes();
-});
-document.getElementById('letra-custom').addEventListener('input', (e) => {
-  aplicarLetra(e.target.value);
-  renderAjustes();
-});
+// Modo claro / oscuro desde el panel
+document.getElementById('modo-claro').addEventListener('click', () => setTema('light'));
+document.getElementById('modo-oscuro').addEventListener('click', () => setTema('dark'));
 
 // ===== Tema claro/oscuro =====
 const btnTema = document.getElementById('btn-tema');
@@ -1001,18 +1046,19 @@ function aplicarTema(tema) {
     Chart.defaults.borderColor = tema === 'dark' ? '#334155' : '#e2e8f0';
   }
 }
-btnTema.addEventListener('click', () => {
-  const nuevo = temaActual() === 'dark' ? 'light' : 'dark';
-  localStorage.setItem('despensa_tema', nuevo);
-  // Un fondo/letra elegidos a mano pisan a los del tema y el cambio no se
-  // vería: al cambiar de tema vuelven al automático para que el tema mande.
+// Cambia a claro/oscuro. Un fondo/letra elegidos a mano pisan a los del tema y
+// el cambio no se vería, así que al cambiar de tema vuelven al automático.
+function setTema(tema) {
+  localStorage.setItem('despensa_tema', tema);
   const habiaPersonalizados = localStorage.getItem('despensa_fondo') || localStorage.getItem('despensa_letra');
-  aplicarTema(nuevo);
+  aplicarTema(tema);
   aplicarFondo(null);
   aplicarLetra(null);
   if (habiaPersonalizados) toast('Fondo y letra volvieron al automático del tema');
   if (document.getElementById('tab-historial').classList.contains('active')) renderGrafico();
-});
+  if (ajustesOverlay.style.display !== 'none') renderAjustes();
+}
+btnTema.addEventListener('click', () => setTema(temaActual() === 'dark' ? 'light' : 'dark'));
 aplicarColorGuardado();
 aplicarTema(temaActual());
 aplicarFondoGuardado();
