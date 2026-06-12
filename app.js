@@ -209,6 +209,7 @@ const ICONOS = {
   mas: 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z',
   ajuste: 'M19.14 12.94a7.07 7.07 0 0 0 .05-.94 7.07 7.07 0 0 0-.05-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54A.48.48 0 0 0 13.93 2h-3.86a.48.48 0 0 0-.48.41l-.36 2.54a7.3 7.3 0 0 0-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.71 8.47a.49.49 0 0 0 .12.61l2.03 1.98a7.07 7.07 0 0 0-.05.94 7.07 7.07 0 0 0 .05.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32a.49.49 0 0 0 .59.22l2.39-.96a7.3 7.3 0 0 0 1.62.94l.36 2.54a.48.48 0 0 0 .48.41h3.86a.48.48 0 0 0 .48-.41l.36-2.54a7.3 7.3 0 0 0 1.62-.94l2.39.96a.49.49 0 0 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61zM12 15.6A3.6 3.6 0 1 1 15.6 12 3.6 3.6 0 0 1 12 15.6z',
   personas: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
+  compartir: 'M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.66 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z',
 };
 function icono(n) {
   return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONOS[n]}"/></svg>`;
@@ -464,47 +465,6 @@ if (SR) {
   });
 } else {
   btnVoz.addEventListener('click', () => toast('Tu navegador no permite dictar por voz'));
-}
-
-function renderBotonesRapidos() {
-  const cuenta = {};
-  for (const c of datos.consumos) cuenta[c.producto] = (cuenta[c.producto] || 0) + 1;
-  const top = Object.entries(cuenta).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  const cont = document.getElementById('botones-rapidos');
-  if (top.length === 0) {
-    cont.innerHTML = '<span class="hint">Cuando cargues seguido, acá van a aparecer accesos rápidos.</span>';
-    return;
-  }
-  const cat = catalogo();
-  cont.innerHTML = top.map(([n]) => `
-    <div class="chip-card" data-prod="${escapeHtml(n)}">
-      <span class="chip-nombre">${escapeHtml(n)} <small>${escapeHtml(cat[n].unidad)}</small></span>
-      <span class="chip-ctrl">
-        <button type="button" class="iconbtn menos">−</button>
-        <input type="number" step="any" min="0" class="chip-cant" value="1" />
-        <button type="button" class="iconbtn mas">+</button>
-      </span>
-      <button type="button" class="chip-add">Agregar</button>
-    </div>`).join('');
-
-  cont.querySelectorAll('.chip-card').forEach(card => {
-    const prod = card.dataset.prod;
-    const input = card.querySelector('.chip-cant');
-    card.querySelector('.menos').addEventListener('click', () => {
-      input.value = Math.max(0, (parseFloat(input.value) || 0) - 1);
-    });
-    card.querySelector('.mas').addEventListener('click', () => {
-      input.value = (parseFloat(input.value) || 0) + 1;
-    });
-    card.querySelector('.chip-add').addEventListener('click', () => {
-      const q = parseFloat(input.value);
-      if (!(q > 0)) { toast('Poné una cantidad mayor a 0'); return; }
-      const info = cat[prod];
-      registrarConsumo(prod, q, info.unidad, info.categoria);
-      toast(`+${fmtCant(q)} ${prod}`);
-      refrescarTodo();
-    });
-  });
 }
 
 function renderUltimos() {
@@ -1449,7 +1409,6 @@ document.querySelectorAll('[data-ico]').forEach(el => { el.innerHTML = icono(el.
 // ===== refresco general =====
 function refrescarTodo() {
   renderPrediccion();
-  renderBotonesRapidos();
   renderUltimos();
   renderLista();
   if (document.getElementById('tab-stock').classList.contains('active')) renderStock();

@@ -326,7 +326,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 }
 .lista-items li .nombre { flex: 1; }
 .lista-items li .cant { color: var(--gris-osc); font-size: 14px; font-weight: 600; }
-.lista-items li input[type=checkbox] { width: 22px; height: 22px; flex: none; accent-color: var(--verde); }
+.lista-items li input[type=checkbox] { width: 22px; height: 22px; flex: none; accent-color: var(--accent); }
 .lista-items li.en-carrito { opacity: .6; }
 .lista-items li.en-carrito .nombre { text-decoration: line-through; }
 .lista-items li.en-carrito .cant { text-decoration: line-through; }
