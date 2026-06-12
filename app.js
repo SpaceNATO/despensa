@@ -371,6 +371,9 @@ form.addEventListener('submit', (e) => {
   toast(`Agregado: ${producto}`);
   form.reset();
   document.getElementById('cantidad').value = 1;
+  // refrescar los dropdowns propios al estado por defecto
+  inputUnidad.dispatchEvent(new Event('change'));
+  inputCategoria.dispatchEvent(new Event('change'));
   inputProducto.focus();
   refrescarTodo();
 });
@@ -381,8 +384,59 @@ function autocompletarProducto() {
   if (info) {
     inputUnidad.value = info.unidad;
     inputCategoria.value = info.categoria;
+    inputUnidad.dispatchEvent(new Event('change'));   // refresca el dropdown propio
+    inputCategoria.dispatchEvent(new Event('change'));
   }
 }
+
+// ----- Dropdown propio para los <select> (Unidad, Categoría) -----
+// Reemplaza el selector del sistema por un desplegable anclado al campo.
+function crearDropdown(select) {
+  const cs = document.createElement('div');
+  cs.className = 'cs';
+  select.parentNode.insertBefore(cs, select);
+  cs.appendChild(select); // el select queda adentro, oculto, como fuente del valor
+  const trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = 'cs-trigger';
+  trigger.innerHTML = '<span class="cs-valor"></span><svg class="cs-flecha" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const menu = document.createElement('div');
+  menu.className = 'cs-menu';
+  menu.hidden = true;
+  cs.appendChild(trigger);
+  cs.appendChild(menu);
+  const valor = trigger.querySelector('.cs-valor');
+
+  [...select.options].forEach(o => {
+    const div = document.createElement('div');
+    div.className = 'cs-opcion';
+    div.dataset.val = o.value;
+    div.textContent = o.textContent;
+    div.addEventListener('click', () => {
+      select.value = o.value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      cerrar();
+    });
+    menu.appendChild(div);
+  });
+  function pintar() {
+    const opt = select.options[select.selectedIndex];
+    valor.textContent = opt ? opt.textContent : '';
+    menu.querySelectorAll('.cs-opcion').forEach(o => o.classList.toggle('activa', o.dataset.val === select.value));
+  }
+  function abrir() { cerrarDropdowns(cs); cs.classList.add('abierto'); menu.hidden = false; }
+  function cerrar() { cs.classList.remove('abierto'); menu.hidden = true; }
+  cs._cerrar = cerrar;
+  trigger.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden ? abrir() : cerrar(); });
+  select.addEventListener('change', pintar);
+  pintar();
+}
+function cerrarDropdowns(except) {
+  document.querySelectorAll('.cs.abierto').forEach(cs => { if (cs !== except && cs._cerrar) cs._cerrar(); });
+}
+document.addEventListener('click', () => cerrarDropdowns(null));
+crearDropdown(inputUnidad);
+crearDropdown(inputCategoria);
 
 // ----- Desplegable de sugerencias propio (reemplaza al <datalist> nativo) -----
 const sugBox = document.getElementById('sugerencias');

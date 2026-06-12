@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="styles.css?v=13" />
+  <link rel="stylesheet" href="styles.css?v=14" />
 </head>
 <body>
   <header>
@@ -34,7 +34,7 @@
           <div id="sugerencias" class="sugerencias" hidden></div>
         </div>
 
-        <!-- Cantidad | Unidad | Categoría -->
+        <!-- Cantidad | Unidad (una fila) -->
         <div class="row-datos">
           <div class="subcard subcard-cantidad">
             <label for="cantidad">Cantidad</label>
@@ -56,19 +56,21 @@
               <option value="paquete">paq.</option>
             </select>
           </div>
-          <div class="subcard subcard-categoria">
-            <label for="categoria">Categoría</label>
-            <select id="categoria" name="categoria">
-              <option value="Almacén">Almacén</option>
-              <option value="Lácteos">Lácteos</option>
-              <option value="Frutas y verduras">Frutas y verduras</option>
-              <option value="Carnes">Carnes</option>
-              <option value="Limpieza">Limpieza</option>
-              <option value="Higiene">Higiene</option>
-              <option value="Bebidas">Bebidas</option>
-              <option value="Otros">Otros</option>
-            </select>
-          </div>
+        </div>
+
+        <!-- Categoría (fila propia, a todo el ancho) -->
+        <div class="subcard subcard-categoria">
+          <label for="categoria">Categoría</label>
+          <select id="categoria" name="categoria">
+            <option value="Almacén">Almacén</option>
+            <option value="Lácteos">Lácteos</option>
+            <option value="Frutas y verduras">Frutas y verduras</option>
+            <option value="Carnes">Carnes</option>
+            <option value="Limpieza">Limpieza</option>
+            <option value="Higiene">Higiene</option>
+            <option value="Bebidas">Bebidas</option>
+            <option value="Otros">Otros</option>
+          </select>
         </div>
 
         <button type="submit" class="btn-primary btn-agregar"><span data-ico="mas" aria-hidden="true"></span> Agregar</button>
@@ -220,6 +222,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=14"></script>
 </body>
 </html>

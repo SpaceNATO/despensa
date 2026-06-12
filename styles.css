@@ -135,84 +135,110 @@ h3 { font-size: 14px; color: var(--gris-osc); margin: 20px 0 8px; text-transform
 .card-producto {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   background: var(--card);
   border: .5px solid var(--borde);
-  border-radius: 14px;
-  padding: 9px 11px;
-  margin-bottom: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, .045);
+  border-radius: 16px;
+  padding: 14px 15px;
+  margin-bottom: 13px;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, .05);
   position: relative;
 }
 .card-producto .ico-lupa {
   flex: none;
-  width: 38px; height: 38px;
-  border-radius: 11px;
+  width: 46px; height: 46px;
+  border-radius: 13px;
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--accent);
   display: flex; align-items: center; justify-content: center;
 }
-.card-producto .ico-lupa svg.ico { width: 19px; height: 19px; }
-.campo-producto { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.card-producto .ico-lupa svg.ico { width: 22px; height: 22px; }
+.campo-producto { flex: 1; display: flex; flex-direction: column; min-width: 0; gap: 3px; }
 .campo-producto label {
-  font-size: 8px; font-weight: 700; letter-spacing: .6px;
+  font-size: 9px; font-weight: 700; letter-spacing: .7px;
   text-transform: uppercase; color: var(--gris-osc); margin: 0;
 }
 .campo-producto input {
-  border: none; background: none; padding: 2px 0 0; border-radius: 0;
-  font-size: 14px; color: var(--texto); width: 100%;
+  border: none; background: none; padding: 0; border-radius: 0;
+  font-size: 16.5px; color: var(--texto); width: 100%;
 }
 .campo-producto input:focus { outline: none; }
 .card-producto .ico-mic {
   flex: none;
-  width: 38px; height: 38px; border-radius: 11px;
+  width: 46px; height: 46px; border-radius: 13px;
   background: var(--gris); border: none; color: var(--gris-osc);
   display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
-.card-producto .ico-mic svg.ico { width: 18px; height: 18px; }
+.card-producto .ico-mic svg.ico { width: 21px; height: 21px; }
 .card-producto .ico-mic.escuchando { background: color-mix(in srgb, var(--rojo) 18%, transparent); color: var(--rojo); }
 
 /* Sub-cards Cantidad | Unidad | Categoría */
-.row-datos { display: flex; gap: 10px; align-items: stretch; }
+.row-datos { display: flex; gap: 12px; align-items: stretch; }
 .subcard {
   background: var(--card);
   border: .5px solid var(--borde);
-  border-radius: 14px;
-  padding: 8px 11px 10px;
-  display: flex; flex-direction: column; gap: 6px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, .045);
+  border-radius: 16px;
+  padding: 12px 14px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, .05);
 }
 .subcard > label {
-  font-size: 8px; font-weight: 700; letter-spacing: .6px;
+  font-size: 9px; font-weight: 700; letter-spacing: .7px;
   text-transform: uppercase; color: var(--gris-osc); margin: 0;
 }
-.subcard-cantidad { width: 126px; flex: none; }
-.subcard-unidad { width: 76px; flex: none; }
-.subcard-categoria { flex: 1; min-width: 0; }
-.cant-ctrl { display: flex; align-items: center; gap: 4px; }
+.subcard-cantidad { flex: 1; min-width: 0; }
+.subcard-unidad { width: 128px; flex: none; }
+.subcard-categoria { width: 100%; margin-top: 12px; }
+.cant-ctrl { display: flex; align-items: center; gap: 6px; }
 .cant-ctrl .step {
-  flex: none; width: 28px; height: 28px; border-radius: 9px;
+  flex: none; width: 34px; height: 34px; border-radius: 11px;
   background: var(--gris); border: none; color: var(--texto);
-  font-size: 19px; line-height: 1; cursor: pointer;
+  font-size: 22px; line-height: 1; cursor: pointer;
 }
 .cant-ctrl .step:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .cant-ctrl input {
   flex: 1; min-width: 0; width: 100%;
   border: none; background: none; padding: 0; border-radius: 0;
-  text-align: center; font-size: 16px; font-weight: 700; color: var(--texto);
+  text-align: center; font-size: 19px; font-weight: 700; color: var(--texto);
 }
 .cant-ctrl input:focus { outline: none; }
-.subcard select {
-  border: none; background: none; padding: 1px 16px 0 0; border-radius: 0;
-  font-size: 15px; font-weight: 600; color: var(--texto); width: 100%;
-  appearance: none; -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right center;
+
+/* Dropdown propio para Unidad y Categoría (en vez del selector del sistema) */
+.cs { position: relative; }
+.cs select { display: none; } /* el nativo queda como fuente del valor, oculto */
+.cs-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  width: 100%; border: none; background: none; padding: 0;
+  font-size: 16.5px; font-weight: 600; color: var(--texto);
+  cursor: pointer; text-align: left; line-height: 1.3;
 }
-.subcard select:focus { outline: none; }
-.btn-agregar { display: flex; align-items: center; justify-content: center; gap: 6px; }
-.btn-agregar svg.ico { width: 18px; height: 18px; }
+.cs-valor { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-flecha { flex: none; width: 11px; height: 7px; color: var(--gris-osc); transition: transform .15s; }
+.cs.abierto .cs-flecha { transform: rotate(180deg); }
+.cs-menu {
+  position: absolute;
+  top: calc(100% + 9px); left: 0;
+  min-width: 100%;
+  background: var(--bg-elev);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .22);
+  padding: 6px;
+  z-index: 60;
+  max-height: 244px; overflow-y: auto;
+  animation: pop .14s ease;
+}
+.cs-menu[hidden] { display: none; }
+.cs-opcion {
+  padding: 11px 12px; font-size: 15px; border-radius: 9px;
+  cursor: pointer; white-space: nowrap; color: var(--texto);
+}
+.cs-opcion:hover { background: var(--gris); }
+.cs-opcion.activa { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); font-weight: 600; }
+.subcard-categoria .cs-menu { right: 0; }
+
+.btn-agregar { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 16px; font-size: 16.5px; margin-top: 13px; }
+.btn-agregar svg.ico { width: 19px; height: 19px; }
 
 input, select {
   font-size: 16px;
