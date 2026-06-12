@@ -19,6 +19,156 @@ function guardarDatos() {
 
 let datos = cargarDatos();
 
+// ===== NUBE: compartir la despensa entre celulares (Firebase) =====
+// En "modo casa" los datos viven en Firestore y se sincronizan en vivo.
+// Sin casa, todo sigue igual que siempre (solo en este teléfono).
+const firebaseConfig = {
+  apiKey: "AIzaSyDh_Zmxz6SLxd2OE6WQgNpatKoXOg17Zds",
+  authDomain: "mi-despensa-8214e.firebaseapp.com",
+  projectId: "mi-despensa-8214e",
+  storageBucket: "mi-despensa-8214e.firebasestorage.app",
+  messagingSenderId: "912403854105",
+  appId: "1:912403854105:web:362351ad3a44c0e5694b88",
+};
+const CASA_KEY = 'despensa_casa';
+let fbApp = null, fbDb = null, fbAuth = null, casaUnsub = [];
+
+function casaActual() { return localStorage.getItem(CASA_KEY) || null; }
+function enCasa() { return !!casaActual(); }
+function casaRef() { return fbDb.collection('casas').doc(casaActual()); }
+
+function fbInit() {
+  if (fbApp) return true;
+  if (!window.firebase) return false;
+  try {
+    fbApp = firebase.initializeApp(firebaseConfig);
+    fbDb = firebase.firestore();
+    fbAuth = firebase.auth();
+    fbDb.enablePersistence({ synchronizeTabs: true }).catch(() => {}); // funciona offline
+    return true;
+  } catch { return false; }
+}
+async function fbLogin() {
+  if (!fbInit()) throw new Error('sin-firebase');
+  if (fbAuth.currentUser) return fbAuth.currentUser;
+  await fbAuth.signInAnonymously();
+  return new Promise(res => {
+    const off = fbAuth.onAuthStateChanged(u => { if (u) { off(); res(u); } });
+  });
+}
+function avisarErrorNube(e) { console.warn('nube:', e && e.message); }
+
+// Código de casa difícil de adivinar (sin letras/números que se confunden)
+function generarCodigo() {
+  const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 8; i++) s += ABC[Math.floor(Math.random() * ABC.length)];
+  return s;
+}
+function idStock(prod) { return encodeURIComponent(prod).replace(/\./g, '%2E').slice(0, 300); }
+const fv = () => firebase.firestore.FieldValue;
+
+// ---- Operaciones en la nube (solo se usan en modo casa) ----
+function nubeAgregarConsumo(c) { casaRef().collection('consumos').doc(c.id).set(c).catch(avisarErrorNube); }
+function nubeEditarConsumo(id, campos) { casaRef().collection('consumos').doc(id).update(campos).catch(avisarErrorNube); }
+function nubeBorrarConsumo(id) { casaRef().collection('consumos').doc(id).delete().catch(avisarErrorNube); }
+function nubeIncrementarStock(prod, delta) {
+  casaRef().collection('stock').doc(idStock(prod)).set({ producto: prod, actual: fv().increment(delta) }, { merge: true }).catch(avisarErrorNube);
+}
+function nubeSetStockCampo(prod, campo, valor) {
+  casaRef().collection('stock').doc(idStock(prod)).set({ producto: prod, [campo]: valor }, { merge: true }).catch(avisarErrorNube);
+}
+function nubeSetCarrito(arr) { casaRef().collection('meta').doc('estado').set({ carrito: arr }, { merge: true }).catch(avisarErrorNube); }
+function nubeConfirmarCompra(aComprar) {
+  const batch = fbDb.batch();
+  for (const c of datos.consumos) {
+    if (!c.comprado && aComprar.has(c.producto)) batch.update(casaRef().collection('consumos').doc(c.id), { comprado: true });
+  }
+  for (const prod of aComprar) {
+    const st = datos.stock[prod];
+    if (st && st.actual < st.minimo) batch.set(casaRef().collection('stock').doc(idStock(prod)), { producto: prod, actual: st.minimo }, { merge: true });
+  }
+  batch.set(casaRef().collection('meta').doc('estado'), { carrito: [] }, { merge: true });
+  batch.commit().catch(avisarErrorNube);
+}
+async function subirDatos(d) {
+  let batch = fbDb.batch();
+  for (const c of d.consumos) batch.set(casaRef().collection('consumos').doc(c.id || uid()), c);
+  for (const [prod, st] of Object.entries(d.stock || {})) batch.set(casaRef().collection('stock').doc(idStock(prod)), { producto: prod, actual: st.actual || 0, minimo: st.minimo || 0 });
+  batch.set(casaRef().collection('meta').doc('estado'), { carrito: d.carrito || [] });
+  await batch.commit();
+}
+async function nubeReemplazarTodo(d) {
+  const [cons, stk] = await Promise.all([casaRef().collection('consumos').get(), casaRef().collection('stock').get()]);
+  const borr = fbDb.batch();
+  cons.docs.forEach(x => borr.delete(x.ref));
+  stk.docs.forEach(x => borr.delete(x.ref));
+  await borr.commit();
+  await subirDatos(d);
+}
+
+// ---- Escuchar la nube y reconstruir `datos` en vivo ----
+let nubeConsumos = [], nubeStock = {}, nubeCarrito = [];
+function recomponerDesdeNube() {
+  datos = { consumos: nubeConsumos.slice(), stock: { ...nubeStock }, carrito: nubeCarrito.slice() };
+  seleccionados.clear();
+  nubeCarrito.forEach(p => seleccionados.add(p));
+  refrescarTodo();
+}
+function cortarEscucha() { casaUnsub.forEach(u => u()); casaUnsub = []; }
+function escucharCasa() {
+  cortarEscucha();
+  const ref = casaRef();
+  casaUnsub.push(ref.collection('consumos').onSnapshot(snap => {
+    nubeConsumos = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+    recomponerDesdeNube();
+  }, avisarErrorNube));
+  casaUnsub.push(ref.collection('stock').onSnapshot(snap => {
+    const s = {};
+    snap.docs.forEach(d => { const v = d.data(); s[v.producto] = { actual: Math.max(0, v.actual || 0), minimo: v.minimo || 0 }; });
+    nubeStock = s; recomponerDesdeNube();
+  }, avisarErrorNube));
+  casaUnsub.push(ref.collection('meta').doc('estado').onSnapshot(d => {
+    nubeCarrito = (d.exists && d.data().carrito) || [];
+    recomponerDesdeNube();
+  }, avisarErrorNube));
+}
+
+// ---- Crear / unirse / salir ----
+async function crearCasa() {
+  await fbLogin();
+  const codigo = generarCodigo();
+  localStorage.setItem(CASA_KEY, codigo);
+  await casaRef().set({ creada: new Date().toISOString() }, { merge: true });
+  await subirDatos(cargarDatos()); // sube lo que ya tenías en este teléfono
+  escucharCasa();
+  return codigo;
+}
+async function unirseCasa(codigo) {
+  codigo = (codigo || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (codigo.length < 6) { toast('Código inválido'); return false; }
+  try {
+    await fbLogin();
+    localStorage.setItem(CASA_KEY, codigo);
+    const doc = await casaRef().get();
+    if (!doc.exists) { localStorage.removeItem(CASA_KEY); toast('No encontré esa casa. Revisá el código.'); return false; }
+    escucharCasa();
+    return true;
+  } catch { localStorage.removeItem(CASA_KEY); toast('No se pudo conectar. ¿Hay internet?'); return false; }
+}
+function salirCasa() {
+  cortarEscucha();
+  localStorage.removeItem(CASA_KEY);
+  datos = cargarDatos(); // vuelve a tu despensa local
+  seleccionados.clear();
+  (datos.carrito || []).forEach(p => seleccionados.add(p));
+  refrescarTodo();
+}
+async function iniciarNube() {
+  if (!enCasa()) return;
+  try { await fbLogin(); escucharCasa(); } catch (e) { avisarErrorNube(e); }
+}
+
 // ---- util ----
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -58,6 +208,7 @@ const ICONOS = {
   mic: 'M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z',
   mas: 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z',
   ajuste: 'M19.14 12.94a7.07 7.07 0 0 0 .05-.94 7.07 7.07 0 0 0-.05-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54A.48.48 0 0 0 13.93 2h-3.86a.48.48 0 0 0-.48.41l-.36 2.54a7.3 7.3 0 0 0-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.71 8.47a.49.49 0 0 0 .12.61l2.03 1.98a7.07 7.07 0 0 0-.05.94 7.07 7.07 0 0 0 .05.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32a.49.49 0 0 0 .59.22l2.39-.96a7.3 7.3 0 0 0 1.62.94l.36 2.54a.48.48 0 0 0 .48.41h3.86a.48.48 0 0 0 .48-.41l.36-2.54a7.3 7.3 0 0 0 1.62-.94l2.39.96a.49.49 0 0 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61zM12 15.6A3.6 3.6 0 1 1 15.6 12 3.6 3.6 0 0 1 12 15.6z',
+  personas: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
 };
 function icono(n) {
   return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONOS[n]}"/></svg>`;
@@ -196,10 +347,13 @@ const inputCategoria = document.getElementById('categoria');
 
 // Registra un consumo y descuenta del stock si ese producto se controla
 function registrarConsumo(producto, cantidad, unidad, categoria) {
-  datos.consumos.push({
-    id: uid(), producto, cantidad, unidad, categoria,
-    fecha: new Date().toISOString(), comprado: false,
-  });
+  const c = { id: uid(), producto, cantidad, unidad, categoria, fecha: new Date().toISOString(), comprado: false };
+  if (enCasa()) {
+    nubeAgregarConsumo(c);
+    if (datos.stock[producto]) nubeIncrementarStock(producto, -cantidad);
+    return; // el listener actualiza `datos` y refresca
+  }
+  datos.consumos.push(c);
   if (datos.stock[producto]) {
     datos.stock[producto].actual = Math.max(0, datos.stock[producto].actual - cantidad);
   }
@@ -373,6 +527,7 @@ function renderUltimos() {
     const c = datos.consumos.find(x => x.id === btn.dataset.id);
     const nombre = c ? c.producto : 'este registro';
     abrirConfirm(`¿Borrar el registro de ${nombre}?`, () => {
+      if (enCasa()) { nubeBorrarConsumo(btn.dataset.id); toast('Borrado'); return; }
       datos.consumos = datos.consumos.filter(x => x.id !== btn.dataset.id);
       guardarDatos(); toast('Borrado'); refrescarTodo();
     });
@@ -384,6 +539,7 @@ function renderUltimos() {
     if (val === null) return;
     const num = parseFloat(val);
     if (!(num > 0)) { toast('Cantidad inválida'); return; }
+    if (enCasa()) { nubeEditarConsumo(c.id, { cantidad: num }); toast('Cantidad actualizada'); return; }
     c.cantidad = num;
     guardarDatos(); toast('Cantidad actualizada'); refrescarTodo();
   }));
@@ -455,16 +611,20 @@ function renderStock() {
     return datos.stock[prod];
   }
   ul.querySelectorAll('.mas').forEach(b => b.addEventListener('click', () => {
+    if (enCasa()) { nubeIncrementarStock(b.dataset.prod, 1); return; }
     asegurar(b.dataset.prod).actual += 1; guardarDatos(); renderStock(); renderLista();
   }));
   ul.querySelectorAll('.menos').forEach(b => b.addEventListener('click', () => {
+    if (enCasa()) { nubeIncrementarStock(b.dataset.prod, -1); return; }
     const s = asegurar(b.dataset.prod); s.actual = Math.max(0, s.actual - 1);
     guardarDatos(); renderStock(); renderLista();
   }));
   ul.querySelectorAll('.stock-actual').forEach(inp => inp.addEventListener('change', () => {
+    if (enCasa()) { nubeSetStockCampo(inp.dataset.prod, 'actual', parseFloat(inp.value) || 0); return; }
     asegurar(inp.dataset.prod).actual = parseFloat(inp.value) || 0; guardarDatos(); renderStock(); renderLista();
   }));
   ul.querySelectorAll('.stock-minimo').forEach(inp => inp.addEventListener('change', () => {
+    if (enCasa()) { nubeSetStockCampo(inp.dataset.prod, 'minimo', parseFloat(inp.value) || 0); return; }
     asegurar(inp.dataset.prod).minimo = parseFloat(inp.value) || 0; guardarDatos(); renderStock(); renderLista();
   }));
 }
@@ -496,6 +656,7 @@ function listaPendiente() {
 const seleccionados = new Set(datos.carrito);
 
 function guardarCarrito() {
+  if (enCasa()) { nubeSetCarrito([...seleccionados]); return; }
   datos.carrito = [...seleccionados];
   guardarDatos();
 }
@@ -540,6 +701,12 @@ function actualizarBotonConfirmar() {
 }
 
 function ejecutarConfirmarCompra(aComprar) {
+  if (enCasa()) {
+    nubeConfirmarCompra(aComprar);
+    seleccionados.clear();
+    toast('Compra confirmada');
+    return; // el listener actualiza todo
+  }
   for (const c of datos.consumos) {
     if (!c.comprado && aComprar.has(c.producto)) c.comprado = true;
   }
@@ -764,8 +931,14 @@ fileRestore.addEventListener('change', () => {
       fileRestore.value = '';
       return;
     }
-    abrirConfirm('Esto reemplazará TODOS tus datos actuales por los del respaldo. ¿Continuar?', () => {
-      datos = { consumos: nuevo.consumos, stock: nuevo.stock || {}, carrito: nuevo.carrito || [] };
+    abrirConfirm('Esto reemplazará TODOS tus datos actuales por los del respaldo. ¿Continuar?', async () => {
+      const limpio = { consumos: nuevo.consumos, stock: nuevo.stock || {}, carrito: nuevo.carrito || [] };
+      if (enCasa()) {
+        try { await nubeReemplazarTodo(limpio); toast('Datos restaurados'); }
+        catch { toast('No se pudo restaurar en la nube'); }
+        return;
+      }
+      datos = limpio;
       seleccionados.clear();
       (datos.carrito || []).forEach(p => seleccionados.add(p));
       guardarDatos();
@@ -1150,6 +1323,70 @@ ajustesOverlay.addEventListener('click', (e) => {
 document.getElementById('modo-claro').addEventListener('click', () => setTema('light'));
 document.getElementById('modo-oscuro').addEventListener('click', () => setTema('dark'));
 
+// ===== Compartir despensa (crear / unirse a una casa) =====
+const casaOverlay = document.getElementById('casa-overlay');
+function renderCasaUI() {
+  const cont = document.getElementById('casa-contenido');
+  const estado = document.getElementById('compartir-estado');
+  if (enCasa()) {
+    const code = casaActual();
+    const url = location.origin + location.pathname + '?casa=' + code;
+    cont.innerHTML = `
+      <p class="casa-titulo">${icono('personas')} Despensa compartida</p>
+      <p class="casa-sub">Mostrale este código o el QR a la otra persona. Lo que anote cualquiera se sincroniza en todos los celulares.</p>
+      <div class="casa-codigo">${code}</div>
+      <div id="casa-qr" class="casa-qr"></div>
+      <p class="casa-sub">La otra persona puede <b>escanear el QR</b> con la cámara del celular, o escribir el código en "Unirme".</p>
+      <button type="button" id="casa-salir" class="btn-secundario casa-salir">Salir de la despensa compartida</button>`;
+    const qrEl = document.getElementById('casa-qr');
+    if (window.QRCode) { qrEl.innerHTML = ''; new QRCode(qrEl, { text: url, width: 184, height: 184, correctLevel: QRCode.CorrectLevel.M }); }
+    document.getElementById('casa-salir').addEventListener('click', () => {
+      abrirConfirm('¿Salir de la despensa compartida? En este celular volvés a tu despensa propia.', () => { salirCasa(); renderCasaUI(); });
+    });
+    if (estado) estado.textContent = 'Compartida — ver código / QR';
+  } else {
+    cont.innerHTML = `
+      <p class="casa-titulo">${icono('personas')} Compartir despensa</p>
+      <p class="casa-sub">Conectá tu despensa con tu pareja o familia: lo que cualquiera consuma se suma a la lista y baja el stock en todos los celulares, aunque no estén juntos.</p>
+      <button type="button" id="casa-crear" class="btn-primary">Crear mi despensa compartida</button>
+      <div class="casa-o">— o —</div>
+      <label class="casa-unir-label">Unirme con un código</label>
+      <div class="casa-unir">
+        <input type="text" id="casa-codigo-input" placeholder="Ej: K7P3QX9A" maxlength="8" autocapitalize="characters" />
+        <button type="button" id="casa-unirme" class="btn-primary">Unirme</button>
+      </div>`;
+    document.getElementById('casa-crear').addEventListener('click', async () => {
+      const b = document.getElementById('casa-crear'); b.disabled = true; b.textContent = 'Creando…';
+      try { await crearCasa(); toast('¡Despensa compartida creada!'); renderCasaUI(); }
+      catch { toast('No se pudo crear. ¿Hay internet?'); b.disabled = false; b.textContent = 'Crear mi despensa compartida'; }
+    });
+    document.getElementById('casa-unirme').addEventListener('click', async () => {
+      const b = document.getElementById('casa-unirme'); b.disabled = true;
+      const ok = await unirseCasa(document.getElementById('casa-codigo-input').value);
+      b.disabled = false;
+      if (ok) { toast('¡Te uniste!'); renderCasaUI(); }
+    });
+    if (estado) estado.textContent = 'Compartir con otra persona';
+  }
+}
+function abrirCasa() { renderCasaUI(); casaOverlay.style.display = 'flex'; }
+function cerrarCasa() { casaOverlay.style.display = 'none'; }
+document.getElementById('btn-compartir').addEventListener('click', abrirCasa);
+document.getElementById('casa-cerrar').addEventListener('click', cerrarCasa);
+casaOverlay.addEventListener('click', (e) => { if (e.target === casaOverlay) cerrarCasa(); });
+
+// Invitación por link: si la URL trae ?casa=CODIGO, ofrecer unirse
+function detectarInvitacionCasa() {
+  const code = (new URLSearchParams(location.search).get('casa') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!code) return;
+  history.replaceState({}, '', location.pathname);
+  if (casaActual() === code) return;
+  abrirConfirm(`¿Querés unirte a la despensa ${code}? Vas a compartirla con esa persona.`, async () => {
+    const ok = await unirseCasa(code);
+    if (ok) { toast('¡Te uniste a la despensa!'); renderCasaUI(); }
+  });
+}
+
 // ===== Tema claro/oscuro =====
 const btnTema = document.getElementById('btn-tema');
 function temaActual() {
@@ -1220,6 +1457,11 @@ function refrescarTodo() {
 }
 
 refrescarTodo();
+
+// Nube: si ya estabas en una despensa compartida, reconectar; y detectar
+// invitaciones que llegan por link (?casa=CODIGO).
+iniciarNube();
+detectarInvitacionCasa();
 
 // Service worker (para que funcione offline)
 if ('serviceWorker' in navigator) {

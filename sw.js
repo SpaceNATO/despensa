@@ -1,5 +1,5 @@
 // Service worker: funciona offline, pero prioriza la versión más nueva.
-const CACHE = 'despensa-v3';
+const CACHE = 'despensa-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -11,6 +11,10 @@ const ASSETS = [
   './icon-512.png',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
   'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+  'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',
+  'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js',
+  'https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js',
 ];
 
 self.addEventListener('install', (e) => {

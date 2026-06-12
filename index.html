@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="styles.css?v=10" />
+  <link rel="stylesheet" href="styles.css?v=11" />
 </head>
 <body>
   <header>
@@ -164,6 +164,11 @@
         </div>
       </div>
 
+      <div class="ajuste-seccion">
+        <h3>Compartir despensa</h3>
+        <button type="button" id="btn-compartir" class="modo-btn" style="width:100%"><span data-ico="personas" aria-hidden="true"></span> <span id="compartir-estado">Compartir con otra persona</span></button>
+      </div>
+
       <button id="ajustes-cerrar" class="btn-primary">Listo</button>
     </div>
   </div>
@@ -192,6 +197,14 @@
     </div>
   </div>
 
+  <!-- Compartir despensa entre celulares (crear / unirse a una "casa") -->
+  <div id="casa-overlay" class="modal-overlay" style="display:none">
+    <div class="modal casa-modal" role="dialog" aria-modal="true">
+      <div id="casa-contenido"></div>
+      <button type="button" id="casa-cerrar" class="btn-secundario">Cerrar</button>
+    </div>
+  </div>
+
   <!-- Cuadro de confirmación (oscurece la pantalla y pregunta Sí/No) -->
   <div id="modal-overlay" class="modal-overlay" style="display:none">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-mensaje">
@@ -205,6 +218,11 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="app.js?v=10"></script>
+  <!-- Firebase (compartir entre celulares) + generador de QR -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
