@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="styles.css?v=14" />
+  <link rel="stylesheet" href="styles.css?v=15" />
 </head>
 <body>
   <header>
@@ -94,7 +94,9 @@
     <!-- ====== STOCK ====== -->
     <section id="tab-stock" class="tab">
       <p class="hint">Cuánto tenés en casa. Baja solo cuando anotás consumo. Si cae por debajo del mínimo, salta a la lista.</p>
-      <ul id="lista-stock" class="lista-items"></ul>
+      <button id="stock-alerta" class="stock-alerta" type="button" hidden></button>
+      <div id="stock-urgentes" class="stock-urgentes" hidden></div>
+      <div id="lista-stock" class="stock-cats"></div>
     </section>
 
     <!-- ====== HISTORIAL ====== -->
@@ -222,6 +224,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
-  <script src="app.js?v=14"></script>
+  <script src="app.js?v=15"></script>
 </body>
 </html>

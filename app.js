@@ -367,11 +367,13 @@ form.addEventListener('submit', (e) => {
   const cantidad = parseFloat(document.getElementById('cantidad').value);
   if (!producto) { toast('Escribí qué producto consumiste'); inputProducto.focus(); return; }
   if (!(cantidad > 0)) { toast('Poné una cantidad mayor a 0'); document.getElementById('cantidad').focus(); return; }
+  const ultimaCat = inputCategoria.value; // recordar la categoría elegida
   registrarConsumo(producto, cantidad, inputUnidad.value, inputCategoria.value);
   toast(`Agregado: ${producto}`);
   form.reset();
   document.getElementById('cantidad').value = 1;
-  // refrescar los dropdowns propios al estado por defecto
+  inputCategoria.value = ultimaCat; // no volver siempre a "Almacén"
+  // refrescar los dropdowns propios al estado actual
   inputUnidad.dispatchEvent(new Event('change'));
   inputCategoria.dispatchEvent(new Event('change'));
   inputProducto.focus();
@@ -391,7 +393,9 @@ function autocompletarProducto() {
 
 // ----- Dropdown propio para los <select> (Unidad, Categoría) -----
 // Reemplaza el selector del sistema por un desplegable anclado al campo.
-function crearDropdown(select) {
+// opts.onAgregar (opcional) agrega un ítem "+ Nueva categoría…" al final.
+function crearDropdown(select, opts) {
+  opts = opts || {};
   const cs = document.createElement('div');
   cs.className = 'cs';
   select.parentNode.insertBefore(cs, select);
@@ -407,36 +411,71 @@ function crearDropdown(select) {
   cs.appendChild(menu);
   const valor = trigger.querySelector('.cs-valor');
 
-  [...select.options].forEach(o => {
-    const div = document.createElement('div');
-    div.className = 'cs-opcion';
-    div.dataset.val = o.value;
-    div.textContent = o.textContent;
-    div.addEventListener('click', () => {
-      select.value = o.value;
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-      cerrar();
-    });
-    menu.appendChild(div);
-  });
+  function cerrar() { cs.classList.remove('abierto'); menu.hidden = true; }
+  function abrir() { cerrarDropdowns(cs); cs.classList.add('abierto'); menu.hidden = false; }
   function pintar() {
     const opt = select.options[select.selectedIndex];
     valor.textContent = opt ? opt.textContent : '';
-    menu.querySelectorAll('.cs-opcion').forEach(o => o.classList.toggle('activa', o.dataset.val === select.value));
+    menu.querySelectorAll('.cs-opcion[data-val]').forEach(o => o.classList.toggle('activa', o.dataset.val === select.value));
   }
-  function abrir() { cerrarDropdowns(cs); cs.classList.add('abierto'); menu.hidden = false; }
-  function cerrar() { cs.classList.remove('abierto'); menu.hidden = true; }
+  function buildMenu() {
+    menu.innerHTML = '';
+    [...select.options].forEach(o => {
+      const div = document.createElement('div');
+      div.className = 'cs-opcion';
+      div.dataset.val = o.value;
+      div.textContent = o.textContent;
+      div.addEventListener('click', () => { select.value = o.value; select.dispatchEvent(new Event('change', { bubbles: true })); cerrar(); });
+      menu.appendChild(div);
+    });
+    if (opts.onAgregar) {
+      const add = document.createElement('div');
+      add.className = 'cs-opcion cs-agregar';
+      add.textContent = '+ Nueva categoría…';
+      add.addEventListener('click', () => { cerrar(); opts.onAgregar(); });
+      menu.appendChild(add);
+    }
+    pintar();
+  }
+  cs._rebuild = buildMenu;
   cs._cerrar = cerrar;
   trigger.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden ? abrir() : cerrar(); });
   select.addEventListener('change', pintar);
-  pintar();
+  buildMenu();
 }
 function cerrarDropdowns(except) {
   document.querySelectorAll('.cs.abierto').forEach(cs => { if (cs !== except && cs._cerrar) cs._cerrar(); });
 }
 document.addEventListener('click', () => cerrarDropdowns(null));
+
+// Categorías propias (las que agrega el usuario) — se recuerdan
+function categoriasPropias() {
+  try { return JSON.parse(localStorage.getItem('despensa_categorias')) || []; } catch { return []; }
+}
+function guardarCategoriaPropia(nombre) {
+  const lista = categoriasPropias();
+  if (!lista.includes(nombre)) { lista.push(nombre); localStorage.setItem('despensa_categorias', JSON.stringify(lista)); }
+}
+// Inyectar las guardadas en el <select> antes de armar el dropdown
+categoriasPropias().forEach(nombre => {
+  if (![...inputCategoria.options].some(o => o.value === nombre)) inputCategoria.add(new Option(nombre, nombre));
+});
+
 crearDropdown(inputUnidad);
-crearDropdown(inputCategoria);
+crearDropdown(inputCategoria, {
+  onAgregar() {
+    const nombre = (prompt('Nombre de la nueva categoría:') || '').trim();
+    if (!nombre) return;
+    if (![...inputCategoria.options].some(o => o.value.toLowerCase() === nombre.toLowerCase())) {
+      inputCategoria.add(new Option(nombre, nombre));
+      guardarCategoriaPropia(nombre);
+    }
+    inputCategoria.value = nombre;
+    const cs = inputCategoria.closest('.cs');
+    if (cs && cs._rebuild) cs._rebuild();        // que aparezca en el menú
+    inputCategoria.dispatchEvent(new Event('change'));
+  }
+});
 
 // ----- Desplegable de sugerencias propio (reemplaza al <datalist> nativo) -----
 const sugBox = document.getElementById('sugerencias');
@@ -595,53 +634,145 @@ function renderPrediccion() {
 }
 
 // ===== STOCK (feature 4) =====
+// Color por categoría (las propias derivan un color estable de su nombre)
+const CAT_COLOR = {
+  'Almacén': '#f59e0b', 'Lácteos': '#3b82f6', 'Frutas y verduras': '#22c55e',
+  'Carnes': '#ef4444', 'Limpieza': '#06b6d4', 'Higiene': '#a855f7',
+  'Bebidas': '#0ea5e9', 'Otros': '#64748b',
+};
+const CAT_ORDEN = ['Almacén', 'Lácteos', 'Frutas y verduras', 'Carnes', 'Limpieza', 'Higiene', 'Bebidas', 'Otros'];
+function colorCategoria(cat) {
+  if (CAT_COLOR[cat]) return CAT_COLOR[cat];
+  const pal = ['#f59e0b', '#3b82f6', '#22c55e', '#ef4444', '#06b6d4', '#a855f7', '#0ea5e9', '#ec4899', '#14b8a6', '#f97316'];
+  let h = 0; for (let i = 0; i < cat.length; i++) h = (h * 31 + cat.charCodeAt(i)) >>> 0;
+  return pal[h % pal.length];
+}
+// Qué categorías están plegadas (se recuerda)
+function colapsadasStock() {
+  try { return new Set(JSON.parse(localStorage.getItem('despensa_stock_colapsadas')) || []); } catch { return new Set(); }
+}
+function guardarColapsadas(set) { localStorage.setItem('despensa_stock_colapsadas', JSON.stringify([...set])); }
+// Referencia "lleno" para la barra: el máximo que tuvo, o el actual/mínimo
+function refStock(st) { return Math.max(st.max || 0, st.actual || 0, st.minimo || 0, 1); }
+
 function renderStock() {
-  const ul = document.getElementById('lista-stock');
+  const cont = document.getElementById('lista-stock');
   const cat = catalogo();
-  const nombres = Object.keys(cat).sort();
+  const nombres = Object.keys(cat);
+  const alerta = document.getElementById('stock-alerta');
+  const urg = document.getElementById('stock-urgentes');
   if (nombres.length === 0) {
-    ul.innerHTML = '<li class="vacio">Cargá algún consumo primero para empezar a controlar stock.</li>';
+    cont.innerHTML = '<p class="vacio">Cargá algún consumo primero para empezar a controlar stock.</p>';
+    alerta.hidden = true; urg.hidden = true;
     return;
   }
-  ul.innerHTML = nombres.map(n => {
-    const st = datos.stock[n] || { actual: 0, minimo: 0 };
-    const bajo = st.minimo > 0 && st.actual < st.minimo;
-    return `
-      <li class="stock-row ${bajo ? 'stock-bajo' : ''}">
-        <span class="nombre">${escapeHtml(n)}
-          <div class="fecha">${escapeHtml(cat[n].unidad)} ${bajo ? `· ${icono('bajando')} poco` : ''}</div>
-        </span>
-        <span class="stock-ctrl">
-          <button class="iconbtn menos" data-prod="${escapeHtml(n)}">−</button>
-          <input class="stock-actual" type="number" step="any" data-prod="${escapeHtml(n)}" value="${st.actual}" />
-          <button class="iconbtn mas" data-prod="${escapeHtml(n)}">+</button>
-        </span>
-        <span class="stock-min">mín<input class="stock-minimo" type="number" step="any" data-prod="${escapeHtml(n)}" value="${st.minimo}" /></span>
-      </li>`;
-  }).join('');
+  // Agrupar productos por categoría
+  const grupos = {};
+  for (const n of nombres) { const c = cat[n].categoria || 'Otros'; (grupos[c] = grupos[c] || []).push(n); }
+  const cats = Object.keys(grupos).sort((a, b) => {
+    const ia = CAT_ORDEN.indexOf(a), ib = CAT_ORDEN.indexOf(b);
+    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    return a.localeCompare(b);
+  });
+
+  const colapsadas = colapsadasStock();
+  const urgentes = [];
+  let html = '';
+  for (const c of cats) {
+    const color = colorCategoria(c);
+    let porReponer = 0;
+    const itemsHtml = grupos[c].sort().map(n => {
+      const st = datos.stock[n] || { actual: 0, minimo: 0 };
+      const cero = st.minimo > 0 && st.actual <= 0;
+      const bajo = st.minimo > 0 && st.actual > 0 && st.actual < st.minimo;
+      if (st.minimo > 0 && st.actual < st.minimo) { porReponer++; urgentes.push({ producto: n, categoria: c, cero }); }
+      const pct = Math.round(Math.min(1, (st.actual || 0) / refStock(st)) * 100);
+      const estado = cero ? 'cero' : (bajo ? 'bajo' : 'ok');
+      const badge = cero ? '<span class="si-badge cero">SIN STOCK</span>' : (bajo ? '<span class="si-badge">REPONER</span>' : '');
+      return `
+        <div class="stock-item ${estado}">
+          <div class="si-top">
+            <div class="si-info"><div class="si-nombre">${escapeHtml(n)} <small>${escapeHtml(cat[n].unidad)}</small> ${badge}</div></div>
+            <div class="si-ctrl">
+              <button class="iconbtn menos" data-prod="${escapeHtml(n)}" aria-label="Menos">−</button>
+              <input class="stock-actual" type="number" step="any" data-prod="${escapeHtml(n)}" value="${st.actual}" />
+              <button class="iconbtn mas" data-prod="${escapeHtml(n)}" aria-label="Más">+</button>
+            </div>
+            <label class="si-min">MÍN<input class="stock-minimo" type="number" step="any" data-prod="${escapeHtml(n)}" value="${st.minimo}" /></label>
+          </div>
+          <div class="si-barra"><span style="width:${pct}%"></span></div>
+        </div>`;
+    }).join('');
+    const colap = colapsadas.has(c);
+    html += `
+      <div class="cat-card ${colap ? 'colapsada' : ''}" data-cat="${escapeHtml(c)}" style="--cat:${color}">
+        <button type="button" class="cat-head">
+          <span class="cat-dot"></span>
+          <span class="cat-nombre">${escapeHtml(c)}</span>
+          <span class="cat-meta">
+            ${porReponer > 0 ? `<span class="cat-aviso">${icono('bajando')} ${porReponer}</span>` : ''}
+            <span class="cat-count">${grupos[c].length}</span>
+            <svg class="cat-flecha" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </button>
+        <div class="cat-items">${itemsHtml}</div>
+      </div>`;
+  }
+  cont.innerHTML = html;
+
+  // Alerta superior + lista de urgentes (se despliega al tocarla)
+  const total = urgentes.length;
+  if (total > 0) {
+    alerta.hidden = false;
+    alerta.innerHTML = `${icono('bajando')} ${total} ítem${total > 1 ? 's' : ''} por reponer`;
+    urg.innerHTML = urgentes.map(u =>
+      `<div class="urg-item" style="--cat:${colorCategoria(u.categoria)}"><span class="urg-dot"></span><span class="urg-nom">${escapeHtml(u.producto)} <small>${escapeHtml(u.categoria)}</small></span>${u.cero ? '<span class="si-badge cero">SIN STOCK</span>' : '<span class="si-badge">REPONER</span>'}</div>`
+    ).join('');
+  } else {
+    alerta.hidden = true; urg.hidden = true; alerta.classList.remove('abierta');
+  }
+
+  // Plegar / desplegar categorías
+  cont.querySelectorAll('.cat-head').forEach(h => h.addEventListener('click', () => {
+    const card = h.closest('.cat-card'); const c = card.dataset.cat;
+    const set = colapsadasStock();
+    if (set.has(c)) set.delete(c); else set.add(c);
+    guardarColapsadas(set);
+    card.classList.toggle('colapsada');
+  }));
 
   function asegurar(prod) {
     if (!datos.stock[prod]) datos.stock[prod] = { actual: 0, minimo: 0 };
     return datos.stock[prod];
   }
-  ul.querySelectorAll('.mas').forEach(b => b.addEventListener('click', () => {
-    if (enCasa()) { nubeIncrementarStock(b.dataset.prod, 1); return; }
-    asegurar(b.dataset.prod).actual += 1; guardarDatos(); renderStock(); renderLista();
+  const maxDe = prod => (datos.stock[prod] && datos.stock[prod].max) || 0;
+  cont.querySelectorAll('.mas').forEach(b => b.addEventListener('click', () => {
+    const p = b.dataset.prod;
+    if (enCasa()) { const na = ((datos.stock[p] && datos.stock[p].actual) || 0) + 1; nubeIncrementarStock(p, 1); nubeSetStockCampo(p, 'max', Math.max(maxDe(p), na)); return; }
+    const s = asegurar(p); s.actual += 1; s.max = Math.max(s.max || 0, s.actual); guardarDatos(); renderStock(); renderLista();
   }));
-  ul.querySelectorAll('.menos').forEach(b => b.addEventListener('click', () => {
-    if (enCasa()) { nubeIncrementarStock(b.dataset.prod, -1); return; }
-    const s = asegurar(b.dataset.prod); s.actual = Math.max(0, s.actual - 1);
-    guardarDatos(); renderStock(); renderLista();
+  cont.querySelectorAll('.menos').forEach(b => b.addEventListener('click', () => {
+    const p = b.dataset.prod;
+    if (enCasa()) { nubeIncrementarStock(p, -1); return; }
+    const s = asegurar(p); s.actual = Math.max(0, s.actual - 1); guardarDatos(); renderStock(); renderLista();
   }));
-  ul.querySelectorAll('.stock-actual').forEach(inp => inp.addEventListener('change', () => {
-    if (enCasa()) { nubeSetStockCampo(inp.dataset.prod, 'actual', parseFloat(inp.value) || 0); return; }
-    asegurar(inp.dataset.prod).actual = parseFloat(inp.value) || 0; guardarDatos(); renderStock(); renderLista();
+  cont.querySelectorAll('.stock-actual').forEach(inp => inp.addEventListener('change', () => {
+    const p = inp.dataset.prod, v = parseFloat(inp.value) || 0;
+    if (enCasa()) { nubeSetStockCampo(p, 'actual', v); nubeSetStockCampo(p, 'max', Math.max(maxDe(p), v)); return; }
+    const s = asegurar(p); s.actual = v; s.max = Math.max(s.max || 0, v); guardarDatos(); renderStock(); renderLista();
   }));
-  ul.querySelectorAll('.stock-minimo').forEach(inp => inp.addEventListener('change', () => {
-    if (enCasa()) { nubeSetStockCampo(inp.dataset.prod, 'minimo', parseFloat(inp.value) || 0); return; }
-    asegurar(inp.dataset.prod).minimo = parseFloat(inp.value) || 0; guardarDatos(); renderStock(); renderLista();
+  cont.querySelectorAll('.stock-minimo').forEach(inp => inp.addEventListener('change', () => {
+    const p = inp.dataset.prod, v = parseFloat(inp.value) || 0;
+    if (enCasa()) { nubeSetStockCampo(p, 'minimo', v); return; }
+    asegurar(p).minimo = v; guardarDatos(); renderStock(); renderLista();
   }));
 }
+// La alerta de arriba despliega/pliega la lista de urgentes
+document.getElementById('stock-alerta').addEventListener('click', () => {
+  const urg = document.getElementById('stock-urgentes');
+  urg.hidden = !urg.hidden;
+  document.getElementById('stock-alerta').classList.toggle('abierta', !urg.hidden);
+});
 
 // ===== LISTA DE COMPRAS =====
 // Junta: (a) lo consumido sin reponer + (b) productos con stock bajo.
