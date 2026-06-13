@@ -200,11 +200,13 @@ h3 { font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 700; color: 
 .cant-num {
   width: 100%; text-align: center; font-size: 30px; font-weight: 800;
   font-family: 'Sora', sans-serif; font-variant-numeric: tabular-nums;
-  color: var(--texto); background: none; border: none; cursor: pointer;
-  user-select: none; padding: 4px 0; line-height: 1; border-radius: 8px;
-  touch-action: manipulation;
+  color: var(--texto); background: none; border: none;
+  padding: 4px 0; line-height: 1; border-radius: 8px;
+  touch-action: manipulation; -moz-appearance: textfield;
 }
-.cant-num:active { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.cant-num::-webkit-inner-spin-button,
+.cant-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.cant-num:focus { outline: none; background: color-mix(in srgb, var(--accent) 8%, transparent); }
 
 /* Chips de unidad */
 .unidad-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }

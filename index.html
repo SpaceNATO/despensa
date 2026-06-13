@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=45" />
+  <link rel="stylesheet" href="styles.css?v=46" />
 </head>
 <body>
   <header>
@@ -46,9 +46,8 @@
                 <button type="button" class="step" id="cant-menos" aria-label="Menos">−</button>
                 <button type="button" class="step" id="cant-mas" aria-label="Más">+</button>
               </div>
-              <button type="button" class="cant-num" id="cant-num" aria-label="Cambiar cantidad">1</button>
+              <input type="number" inputmode="decimal" class="cant-num" id="cant-num" value="1" min="0.01" step="any" aria-label="Cambiar cantidad">
             </div>
-            <input id="cantidad" name="cantidad" type="hidden" value="1" />
           </div>
           <div class="subcard subcard-unidad">
             <label>Unidad</label>
@@ -324,7 +323,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
-  <script src="app.js?v=45"></script>
+  <script src="app.js?v=46"></script>
 
   <!-- Teclado QWERTY propio (desliza desde abajo) -->
   <div id="qwerty-overlay" class="numpad-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Teclado">

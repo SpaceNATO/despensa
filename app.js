@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.45';
+const APP_VERSION = '0.46';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -387,15 +387,14 @@ function registrarConsumo(producto, cantidad, unidad, categoria) {
 form.addEventListener('submit', (e) => {
   e.preventDefault();
   const producto = inputProducto.value.trim();
-  const cantidad = parseFloat(document.getElementById('cantidad').value);
+  const cantidad = parseFloat(cantNumSpan.value);
   if (!producto) { toast('Escribí qué producto consumiste'); inputProducto.focus(); return; }
-  if (!(cantidad > 0)) { toast('Poné una cantidad mayor a 0'); document.getElementById('cantidad').focus(); return; }
+  if (!(cantidad > 0)) { toast('Poné una cantidad mayor a 0'); cantNumSpan.focus(); return; }
   const ultimaCat = inputCategoria.value; // recordar la categoría elegida
   registrarConsumo(producto, cantidad, inputUnidad.value, inputCategoria.value);
   toast(`Agregado: ${producto}`);
   form.reset();
-  document.getElementById('cantidad').value = 1;
-  cantNumSpan.textContent = '1';
+  cantNumSpan.value = 1;
   inputCategoria.value = ultimaCat; // no volver siempre a "Almacén"
   sincronizarChips(inputUnidad.value);
   inputCategoria.dispatchEvent(new Event('change'));
@@ -593,7 +592,7 @@ function elegirSugerencia(nombre) {
   inputProducto.value = nombre;
   autocompletarProducto();
   ocultarSugerencias();
-  document.getElementById('cantidad').focus();
+  cantNumSpan.focus();
 }
 
 inputProducto.addEventListener('input', () => { autocompletarProducto(); mostrarSugerencias(); });
@@ -614,13 +613,12 @@ inputProducto.addEventListener('keydown', (e) => {
 });
 
 // ----- Botones − / + de la cantidad -----
-const inputCantidad = document.getElementById('cantidad');
 const cantNumSpan = document.getElementById('cant-num');
+const inputCantidad = cantNumSpan; // mismo elemento — input numérico visible
 function pasoCantidad(delta) {
   const v = parseFloat(inputCantidad.value) || 0;
   const nuevo = Math.max(0, Math.round((v + delta) * 100) / 100);
-  inputCantidad.value = nuevo;
-  cantNumSpan.textContent = fmtCant(nuevo || 0);
+  cantNumSpan.value = nuevo || 0;
 }
 document.getElementById('cant-menos').addEventListener('click', () => pasoCantidad(-1));
 document.getElementById('cant-mas').addEventListener('click', () => pasoCantidad(1));
@@ -2295,7 +2293,6 @@ function numpadPresionarTecla(k) {
   document.getElementById('numpad-display').textContent = display;
   if (numpadTarget) {
     numpadTarget.value = numpadValor;
-    if (numpadTarget === inputCantidad) cantNumSpan.textContent = display;
   }
 }
 
@@ -2308,7 +2305,6 @@ addTap(document.getElementById('numpad-ok'), () => {
   if (numpadTarget) {
     const v = numpadValor !== '' ? numpadValor : '0';
     numpadTarget.value = v;
-    if (numpadTarget === inputCantidad) cantNumSpan.textContent = fmtCant(parseFloat(v) || 0);
     numpadTarget.dispatchEvent(new Event('change', { bubbles: true }));
   }
   cerrarNumpad();
@@ -2317,9 +2313,6 @@ document.getElementById('numpad-overlay').addEventListener('click', (e) => {
   if (e.target === document.getElementById('numpad-overlay') && Date.now() - _numpadOpenAt > 350) cerrarNumpad();
 });
 
-// Tocar el número de cantidad abre el numpad
-// Usa click en vez de addTap: cant-num ya tiene touch-action:manipulation en CSS
-cantNumSpan.addEventListener('click', () => abrirNumpad(inputCantidad));
 
 // ===== Teclado QWERTY propio =====
 let qwertyValor = '';
