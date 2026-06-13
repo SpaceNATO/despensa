@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.46';
+const APP_VERSION = '0.47';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -622,6 +622,12 @@ function pasoCantidad(delta) {
 }
 document.getElementById('cant-menos').addEventListener('click', () => pasoCantidad(-1));
 document.getElementById('cant-mas').addEventListener('click', () => pasoCantidad(1));
+
+// En touch: readonly + numpad propio (igual que stock-minimo)
+if (isTouchDevice) {
+  cantNumSpan.setAttribute('readonly', '');
+  cantNumSpan.addEventListener('touchstart', (e) => { e.preventDefault(); abrirNumpad(cantNumSpan); }, { passive: false });
+}
 
 // ----- Dictado por voz (Chrome en Android lo soporta; donde no, avisa) -----
 const btnVoz = document.getElementById('btn-voz');
