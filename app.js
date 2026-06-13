@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = 'v31';
+const APP_VERSION = 'v32';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -926,12 +926,12 @@ function renderLista() {
         <div class="li-cant">
           <button class="li-step" data-prod="${escapeHtml(it.producto)}" data-dir="-1">−</button>
           <span class="li-num">${fmtCant(cantVal)}</span>
-          <button class="li-step" data-prod="${escapeHtml(it.producto)}" data-dir="1">+</button>
           <span class="li-unidad">${escapeHtml(it.unidad)}</span>
+          <button class="li-step" data-prod="${escapeHtml(it.producto)}" data-dir="1">+</button>
         </div>
       </li>`;
   }).join('');
-  ul.querySelectorAll('.li-step').forEach(btn => btn.addEventListener('click', () => {
+  ul.querySelectorAll('.li-step').forEach(btn => addTap(btn, () => {
     const prod = btn.dataset.prod;
     const dir = parseInt(btn.dataset.dir, 10);
     const cur = listaCantidades.get(prod) || 1;
