@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.44';
+const APP_VERSION = '0.45';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -2318,7 +2318,8 @@ document.getElementById('numpad-overlay').addEventListener('click', (e) => {
 });
 
 // Tocar el número de cantidad abre el numpad
-addTap(cantNumSpan, () => abrirNumpad(inputCantidad));
+// Usa click en vez de addTap: cant-num ya tiene touch-action:manipulation en CSS
+cantNumSpan.addEventListener('click', () => abrirNumpad(inputCantidad));
 
 // ===== Teclado QWERTY propio =====
 let qwertyValor = '';
