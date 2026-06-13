@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.37';
+const APP_VERSION = '0.38';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -881,14 +881,16 @@ function listaPendiente() {
       map[prod].stockBajo = true;
     }
   }
-  return Object.values(map).sort((a, b) =>
-    a.categoria.localeCompare(b.categoria) || a.producto.localeCompare(b.producto));
+  return Object.values(map)
+    .filter(it => !listaIgnorados.has(it.producto))
+    .sort((a, b) => a.categoria.localeCompare(b.categoria) || a.producto.localeCompare(b.producto));
 }
 
 // El "carrito" (productos que ya pusiste en el changuito) se guarda para no perderlo.
 const seleccionados = new Set(datos.carrito);
 const listaCantidades = new Map();
 let listaExtras = []; // ítems agregados manualmente (no vienen de consumos ni stock)
+const listaIgnorados = new Set(); // ignorados temporalmente hasta la próxima compra
 
 function guardarCarrito() {
   if (enCasa()) { nubeSetCarrito([...seleccionados]); return; }
@@ -973,6 +975,7 @@ function renderLista() {
       },
       () => {
         listaExtras = listaExtras.filter(e => e.producto !== prod);
+        listaIgnorados.add(prod);
         seleccionados.delete(prod);
         listaCantidades.delete(prod);
         renderLista();
@@ -1025,6 +1028,7 @@ function ejecutarConfirmarCompra(aComprar, cantidades) {
   }
   seleccionados.clear();
   listaExtras = listaExtras.filter(e => !aComprar.has(e.producto));
+  listaIgnorados.clear();
   datos.carrito = [];
   guardarDatos();
   toast('Compra confirmada');
@@ -1041,6 +1045,37 @@ const listaItemEliminarBtn = document.getElementById('lista-item-eliminar');
 const listaItemCancelarBtn = document.getElementById('lista-item-cancelar');
 const csListaUnidad = crearDropdown(listaItemUnidadEl, {});
 const csListaCategoria = crearDropdown(listaItemCategoriaEl, { colorDot: true });
+const listaItemSugBox = document.getElementById('lista-item-sugerencias');
+let listaItemSugIndex = -1;
+
+function mostrarSugerenciasLista() {
+  const q = normaliza(listaItemNombreEl.value);
+  if (!q) { ocultarSugerenciasLista(); return; }
+  const matches = nombresConocidos()
+    .filter(n => normaliza(n).includes(q))
+    .sort((a, b) => (normaliza(b).startsWith(q) ? 1 : 0) - (normaliza(a).startsWith(q) ? 1 : 0))
+    .slice(0, 8);
+  if (!matches.length) { ocultarSugerenciasLista(); return; }
+  listaItemSugBox.innerHTML = matches.map(n => `<div data-nombre="${escapeHtml(n)}">${escapeHtml(n)}</div>`).join('');
+  listaItemSugBox.hidden = false;
+  listaItemSugIndex = -1;
+  listaItemSugBox.querySelectorAll('div').forEach(d => {
+    d.addEventListener('mousedown', (e) => { e.preventDefault(); elegirSugerenciaLista(d.dataset.nombre); });
+    d.addEventListener('touchstart', (e) => { e.preventDefault(); elegirSugerenciaLista(d.dataset.nombre); }, { passive: false });
+  });
+}
+function ocultarSugerenciasLista() { listaItemSugBox.hidden = true; listaItemSugIndex = -1; }
+function elegirSugerenciaLista(nombre) {
+  listaItemNombreEl.value = nombre;
+  const info = listaItemInfoConocida(nombre);
+  if (info) {
+    listaItemUnidadEl.value = info.unidad;
+    listaItemUnidadEl.dispatchEvent(new Event('change'));
+    listaItemCategoriaEl.value = info.categoria;
+    listaItemCategoriaEl.dispatchEvent(new Event('change'));
+  }
+  ocultarSugerenciasLista();
+}
 
 const UNIDADES_LISTA_BASE = ['u', 'L', 'kg', 'g', 'ml', 'rollo', 'paquete'];
 const CATEGORIAS_LISTA_BASE = ['Almacén', 'Lácteos', 'Frutas y verduras', 'Carnes', 'Limpieza', 'Higiene', 'Bebidas', 'Otros'];
@@ -1088,11 +1123,13 @@ function poblarSelectsListaItem() {
 
 function cerrarListaItemModal() {
   listaItemOverlay.style.display = 'none';
+  ocultarSugerenciasLista();
   listaItemGuardarBtn.onclick = null;
   listaItemEliminarBtn.onclick = null;
   listaItemCancelarBtn.onclick = null;
   listaItemNombreEl.oninput = null;
   listaItemNombreEl.onkeydown = null;
+  listaItemNombreEl.onblur = null;
 }
 
 function abrirListaItemModal({ nombre = '', unidad = 'u', categoria = 'Almacén' } = {}, isEdit, onGuardar, onEliminar) {
@@ -1107,6 +1144,7 @@ function abrirListaItemModal({ nombre = '', unidad = 'u', categoria = 'Almacén'
 
   if (!isEdit) {
     listaItemNombreEl.oninput = () => {
+      mostrarSugerenciasLista();
       const info = listaItemInfoConocida(listaItemNombreEl.value.trim());
       if (info) {
         listaItemUnidadEl.value = info.unidad;
@@ -1115,6 +1153,7 @@ function abrirListaItemModal({ nombre = '', unidad = 'u', categoria = 'Almacén'
         listaItemCategoriaEl.dispatchEvent(new Event('change'));
       }
     };
+    listaItemNombreEl.onblur = () => setTimeout(ocultarSugerenciasLista, 150);
   }
 
   const guardarFn = () => {
@@ -1124,7 +1163,18 @@ function abrirListaItemModal({ nombre = '', unidad = 'u', categoria = 'Almacén'
     onGuardar(nom, listaItemUnidadEl.value, listaItemCategoriaEl.value);
   };
   listaItemGuardarBtn.onclick = guardarFn;
-  listaItemNombreEl.onkeydown = (e) => { if (e.key === 'Enter') guardarFn(); };
+  listaItemNombreEl.onkeydown = (e) => {
+    if (!listaItemSugBox.hidden) {
+      const divs = [...listaItemSugBox.querySelectorAll('div')];
+      if (e.key === 'ArrowDown') { e.preventDefault(); listaItemSugIndex = Math.min(divs.length - 1, listaItemSugIndex + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); listaItemSugIndex = Math.max(0, listaItemSugIndex - 1); }
+      else if (e.key === 'Enter' && listaItemSugIndex >= 0 && divs[listaItemSugIndex]) { e.preventDefault(); elegirSugerenciaLista(divs[listaItemSugIndex].dataset.nombre); return; }
+      else if (e.key === 'Escape') { ocultarSugerenciasLista(); return; }
+      divs.forEach((d, i) => d.classList.toggle('activa', i === listaItemSugIndex));
+      return;
+    }
+    if (e.key === 'Enter') guardarFn();
+  };
   listaItemEliminarBtn.onclick = () => { cerrarListaItemModal(); onEliminar && onEliminar(); };
   listaItemCancelarBtn.onclick = cerrarListaItemModal;
 
