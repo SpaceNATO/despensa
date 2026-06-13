@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.42';
+const APP_VERSION = '0.43';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -1239,10 +1239,12 @@ document.getElementById('btn-confirmar').addEventListener('click', () => {
 });
 
 function textoLista() {
-  const items = listaPendiente();
-  return '🛒 Lista de compras:\n' + items.map(it =>
-    `• ${it.producto}${it.cantidad > 0 ? ` (${fmtCant(it.cantidad)} ${it.unidad})` : ''}${it.stockBajo ? ' [poco stock]' : ''}`
-  ).join('\n');
+  const pendientes = listaPendiente();
+  const items = [...pendientes, ...listaExtras.filter(e => !pendientes.find(p => p.producto === e.producto))];
+  return '🛒 Lista de compras:\n' + items.map(it => {
+    const cant = listaCantidades.get(it.producto) || (it.cantidad > 0 ? it.cantidad : 0);
+    return `• ${it.producto}${cant > 0 ? ` (${fmtCant(cant)} ${it.unidad})` : ''}${it.stockBajo ? ' [poco stock]' : ''}`;
+  }).join('\n');
 }
 
 // Copia texto al portapapeles con plan B para entornos restrictivos

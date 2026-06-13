@@ -482,14 +482,14 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .datos-vacio { color: var(--gris-osc); text-align: center; padding: 24px 0; font-size: 14px; }
 .datos-fila { display: flex; flex-direction: row; align-items: center; gap: 6px; padding: 9px 0; border-bottom: 1px solid var(--borde); }
 .datos-fila:last-child { border-bottom: none; }
-.datos-nombre-input { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; border: none; background: none; color: var(--texto); padding: 2px 0; font-family: 'Nunito', inherit; }
+.datos-nombre-input { flex: 3; min-width: 0; font-size: 13px; font-weight: 600; border: none; background: none; color: var(--texto); padding: 2px 0; font-family: 'Nunito', inherit; }
 .datos-nombre-input:focus { outline: none; border-bottom: 1.5px solid var(--accent); }
-.datos-cs-u { flex: none; width: 62px; }
-.datos-cs-u .cs-trigger { padding: 4px 6px; border-radius: 8px; border: 1.5px solid var(--borde); font-size: 11px; width: 100%; }
+.datos-cs-u { flex: 2; min-width: 0; }
+.datos-cs-u .cs-trigger { padding: 4px 6px; border-radius: 8px; border: 1.5px solid var(--borde); font-size: 11px; width: 100%; box-sizing: border-box; }
 .datos-cs-u .cs-flecha { display: none; }
 .datos-cs-u.abierto .cs-trigger { border-color: var(--accent); }
-.datos-cs-c { flex: none; width: 90px; }
-.datos-cs-c .cs-trigger { padding: 4px 6px; border-radius: 8px; border: 1.5px solid var(--borde); font-size: 11px; width: 100%; }
+.datos-cs-c { flex: 3; min-width: 0; }
+.datos-cs-c .cs-trigger { padding: 4px 6px; border-radius: 8px; border: 1.5px solid var(--borde); font-size: 11px; width: 100%; box-sizing: border-box; }
 .datos-cs-c.abierto .cs-trigger { border-color: var(--accent); }
 
 /* ===== Gestionar unidades y categorías ===== */
@@ -797,6 +797,8 @@ canvas { margin: 12px 0; max-height: 320px; }
 }
 .sheet-titulo { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
 .sheet-titulo svg.ico { width: 20px; height: 20px; color: var(--accent); }
+.ajuste-fila-botones { display: flex; gap: 10px; margin-bottom: 12px; }
+.ajuste-seccion-mitad { flex: 1; min-width: 0; margin-bottom: 0 !important; }
 .ajuste-seccion {
   background: #F7F8FC;
   border-radius: 14px;
