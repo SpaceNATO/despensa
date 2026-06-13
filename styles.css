@@ -757,6 +757,7 @@ canvas { margin: 12px 0; max-height: 320px; }
   font-size: 16px; color: var(--texto); font-family: 'Nunito', inherit;
 }
 .modal-prompt-input:focus { outline: none; border-color: var(--accent); }
+#modal-overlay.prompt-top { align-items: flex-start; padding-top: min(28vh, 110px); }
 
 /* Modal lista-item: aparece al tercio superior */
 .lista-item-overlay { align-items: flex-start; padding-top: min(28vh, 110px); }
@@ -828,6 +829,11 @@ canvas { margin: 12px 0; max-height: 320px; }
 .swatch-add input[type=color] {
   position: absolute; inset: 0; opacity: 0; cursor: pointer;
   width: 100%; height: 100%; border: none; padding: 0;
+}
+.swatch-preview {
+  display: inline-block; width: 40px; height: 24px;
+  border-radius: 8px; flex: none;
+  box-shadow: 0 0 0 2px var(--bg-elev), 0 0 0 3.5px var(--accent);
 }
 .modo-botones { display: flex; gap: 12px; }
 .modo-btn {

@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.43';
+const APP_VERSION = '0.44';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -1535,9 +1535,11 @@ function abrirPrompt(msg, valorInicial, onOk) {
   }
   inp.addEventListener('keydown', onKey);
 
+  modalOverlay.classList.add('prompt-top');
   modalOnClose = () => {
     inp.style.display = 'none';
     inp.removeEventListener('keydown', onKey);
+    modalOverlay.classList.remove('prompt-top');
     document.getElementById('modal-no').textContent = 'No';
     document.getElementById('modal-si').textContent = 'Sí';
   };
@@ -1835,11 +1837,22 @@ function renderSwatches(contId, lista, actual, onPick) {
   const inicial = /^#[0-9a-f]{6}$/i.test(actual || '') ? actual : '#ff0000';
   add.addEventListener('click', () => abrirRueda(inicial, (hex) => { onPick(hex); renderAjustes(); }));
   cont.appendChild(add);
+  // Muestra el color actualmente seleccionado
+  if (actual) {
+    const preview = document.createElement('span');
+    preview.className = 'swatch-preview';
+    preview.style.background = actual;
+    cont.appendChild(preview);
+  }
 }
 
 // ===== Datos cargados =====
 const UNIDADES_BASE_SET = new Set(UNIDADES_LISTA_BASE);
 const CATEGORIAS_BASE_SET = new Set(CATEGORIAS_LISTA_BASE);
+
+// Aplicar overrides guardados a chips/dropdowns al arrancar
+if (Object.keys(unidOverrides()).length) rebuildDropdownUnidad();
+if (Object.keys(catOverrides()).length) rebuildDropdownCategoria();
 
 function todosProductosConocidos() {
   const map = {};
