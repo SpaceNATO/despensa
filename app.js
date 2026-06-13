@@ -18,6 +18,9 @@ function guardarDatos() {
 }
 
 let datos = cargarDatos();
+// Migración: sembrar max = actual en ítems que no tienen max guardado
+Object.values(datos.stock).forEach(st => { if (!(st.max > 0) && st.actual > 0) st.max = st.actual; });
+guardarDatos();
 
 // ===== NUBE: compartir la despensa entre celulares (Firebase) =====
 // En "modo casa" los datos viven en Firestore y se sincronizan en vivo.
@@ -79,14 +82,17 @@ function nubeSetStockCampo(prod, campo, valor) {
   casaRef().collection('stock').doc(idStock(prod)).set({ producto: prod, [campo]: valor }, { merge: true }).catch(avisarErrorNube);
 }
 function nubeSetCarrito(arr) { casaRef().collection('meta').doc('estado').set({ carrito: arr }, { merge: true }).catch(avisarErrorNube); }
-function nubeConfirmarCompra(aComprar) {
+function nubeConfirmarCompra(aComprar, cantidades) {
   const batch = fbDb.batch();
   for (const c of datos.consumos) {
     if (!c.comprado && aComprar.has(c.producto)) batch.update(casaRef().collection('consumos').doc(c.id), { comprado: true });
   }
   for (const prod of aComprar) {
     const st = datos.stock[prod];
-    if (st) { const nivel = Math.max(st.max || 0, st.minimo || 0); if (nivel > 0) batch.set(casaRef().collection('stock').doc(idStock(prod)), { producto: prod, actual: nivel, max: nivel }, { merge: true }); }
+    if (st) {
+      const nivel = (cantidades && cantidades[prod] > 0) ? cantidades[prod] : Math.max(st.max || 0, st.minimo || 0);
+      if (nivel > 0) batch.set(casaRef().collection('stock').doc(idStock(prod)), { producto: prod, actual: nivel, max: nivel }, { merge: true });
+    }
   }
   batch.set(casaRef().collection('meta').doc('estado'), { carrito: [] }, { merge: true });
   batch.commit().catch(avisarErrorNube);
@@ -359,12 +365,18 @@ function registrarConsumo(producto, cantidad, unidad, categoria) {
   const c = { id: uid(), producto, cantidad, unidad, categoria, fecha: new Date().toISOString(), comprado: false };
   if (enCasa()) {
     nubeAgregarConsumo(c);
-    if (datos.stock[producto]) nubeIncrementarStock(producto, -cantidad);
+    if (datos.stock[producto]) {
+      const s = datos.stock[producto];
+      if (!(s.max > 0) && s.actual > 0) nubeSetStockCampo(producto, 'max', s.actual);
+      nubeIncrementarStock(producto, -cantidad);
+    }
     return; // el listener actualiza `datos` y refresca
   }
   datos.consumos.push(c);
   if (datos.stock[producto]) {
-    datos.stock[producto].actual = Math.max(0, datos.stock[producto].actual - cantidad);
+    const s = datos.stock[producto];
+    if (!(s.max > 0) && s.actual > 0) s.max = s.actual;
+    s.actual = Math.max(0, s.actual - cantidad);
   }
   guardarDatos();
 }
@@ -887,13 +899,17 @@ function renderLista() {
     const detalle = it.stockBajo
       ? `${escapeHtml(it.categoria)} · ${icono('bajando')} poco stock`
       : escapeHtml(it.categoria);
-    const cant = it.cantidad > 0 ? `${fmtCant(it.cantidad)} ${escapeHtml(it.unidad)}` : '—';
+    const cantVal = it.cantidad > 0 ? fmtCant(it.cantidad) : 1;
     const enCarrito = seleccionados.has(it.producto);
     return `
       <li class="${enCarrito ? 'en-carrito' : ''}">
         <input type="checkbox" title="Marcar como puesto en el carrito" data-prod="${escapeHtml(it.producto)}" ${enCarrito ? 'checked' : ''} />
         <span class="nombre">${escapeHtml(it.producto)}<div class="fecha">${detalle}</div></span>
-        <span class="cant">${cant}</span>
+        <div class="li-cant">
+          <input type="number" class="cant-compra" data-prod="${escapeHtml(it.producto)}"
+            value="${cantVal}" min="0.1" step="any" inputmode="none" />
+          <span class="li-unidad">${escapeHtml(it.unidad)}</span>
+        </div>
       </li>`;
   }).join('');
   ul.querySelectorAll('input[type=checkbox]').forEach(chk => chk.addEventListener('change', () => {
@@ -912,9 +928,9 @@ function actualizarBotonConfirmar() {
   btn.innerHTML = icono('check') + (n > 0 ? ` Confirmar compra (${n})` : ' Confirmar toda la lista');
 }
 
-function ejecutarConfirmarCompra(aComprar) {
+function ejecutarConfirmarCompra(aComprar, cantidades) {
   if (enCasa()) {
-    nubeConfirmarCompra(aComprar);
+    nubeConfirmarCompra(aComprar, cantidades);
     seleccionados.clear();
     toast('Compra confirmada');
     return; // el listener actualiza todo
@@ -922,11 +938,11 @@ function ejecutarConfirmarCompra(aComprar) {
   for (const c of datos.consumos) {
     if (!c.comprado && aComprar.has(c.producto)) c.comprado = true;
   }
-  // Al comprar, repone el stock al nivel máximo registrado (o al mínimo si no hay máximo)
+  // Repone el stock: usa la cantidad comprada editada, o el máximo registrado
   for (const prod of aComprar) {
     const st = datos.stock[prod];
     if (!st) continue;
-    const nivel = Math.max(st.max || 0, st.minimo || 0);
+    const nivel = (cantidades && cantidades[prod] > 0) ? cantidades[prod] : Math.max(st.max || 0, st.minimo || 0);
     if (nivel > 0) { st.actual = nivel; st.max = nivel; }
   }
   seleccionados.clear();
@@ -940,11 +956,16 @@ document.getElementById('btn-confirmar').addEventListener('click', () => {
   const items = listaPendiente();
   const aComprar = seleccionados.size > 0 ? new Set(seleccionados) : new Set(items.map(i => i.producto));
   if (aComprar.size === 0) return;
+  const cantidades = {};
+  document.querySelectorAll('.cant-compra').forEach(inp => {
+    const v = parseFloat(inp.value);
+    if (v > 0) cantidades[inp.dataset.prod] = v;
+  });
   const n = aComprar.size;
   const mensaje = seleccionados.size > 0
     ? `¿Confirmás la compra de ${n} producto${n > 1 ? 's' : ''} marcado${n > 1 ? 's' : ''}? Se archivarán en el historial.`
     : `¿Confirmás la compra de toda la lista (${n} producto${n > 1 ? 's' : ''})? Se archivarán en el historial.`;
-  abrirConfirm(mensaje, () => ejecutarConfirmarCompra(aComprar));
+  abrirConfirm(mensaje, () => ejecutarConfirmarCompra(aComprar, cantidades));
 });
 
 function textoLista() {
@@ -1230,7 +1251,7 @@ function abrirPrompt(msg, valorInicial, onOk) {
     modalMensaje.after(inp);
   }
   inp.value = valorInicial != null ? String(valorInicial) : '';
-  inp.style.display = '';
+  inp.style.display = 'block';
   document.getElementById('modal-no').style.display = '';
   document.getElementById('modal-no').textContent = 'Cancelar';
   document.getElementById('modal-si').textContent = 'Listo';
@@ -1718,3 +1739,59 @@ detectarInvitacionCasa();
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+
+// ===== Teclado numérico propio =====
+let numpadTarget = null;
+let numpadValor = '';
+
+function abrirNumpad(inputEl) {
+  numpadTarget = inputEl;
+  numpadValor = String(inputEl.value || '');
+  document.getElementById('numpad-display').textContent = numpadValor || '0';
+  document.getElementById('numpad-overlay').style.display = 'flex';
+}
+function cerrarNumpad() {
+  document.getElementById('numpad-overlay').style.display = 'none';
+  numpadTarget = null;
+}
+
+document.querySelectorAll('.nk[data-k]').forEach(btn => {
+  btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const k = btn.dataset.k;
+    if (k === '⌫') {
+      numpadValor = numpadValor.slice(0, -1);
+    } else if (k === '.') {
+      if (!numpadValor.includes('.')) numpadValor += '.';
+    } else {
+      if (numpadValor === '0' || numpadValor === '') numpadValor = k;
+      else numpadValor += k;
+    }
+    document.getElementById('numpad-display').textContent = numpadValor || '0';
+    if (numpadTarget) numpadTarget.value = numpadValor;
+  });
+});
+
+document.getElementById('numpad-cancel').addEventListener('click', () => cerrarNumpad());
+document.getElementById('numpad-ok').addEventListener('click', () => {
+  if (numpadTarget) {
+    const v = numpadValor !== '' ? numpadValor : '0';
+    numpadTarget.value = v;
+    numpadTarget.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  cerrarNumpad();
+});
+document.getElementById('numpad-overlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('numpad-overlay')) cerrarNumpad();
+});
+
+// Interceptar taps sobre #cantidad y .cant-compra para abrir numpad
+document.getElementById('cantidad').addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch') { e.preventDefault(); abrirNumpad(e.currentTarget); }
+});
+document.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch') {
+    const target = e.target.closest('.cant-compra');
+    if (target) { e.preventDefault(); abrirNumpad(target); }
+  }
+});

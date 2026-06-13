@@ -186,23 +186,26 @@ h3 { font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 700; color: 
   font-size: 10.5px; font-weight: 800; letter-spacing: 0.6px;
   text-transform: uppercase; color: var(--gris-osc); margin: 0;
 }
-.subcard-cantidad { width: 148px; flex: none; }
+.cant-wrapper { width: 148px; flex: none; display: flex; flex-direction: column; }
+.subcard-cantidad { width: 100%; }
 .subcard-unidad { flex: 1; min-width: 0; }
 .subcard-categoria { width: 100%; margin-top: 12px; }
-.cant-ctrl { display: flex; align-items: center; gap: 6px; }
-.cant-ctrl .step {
-  flex: none; width: 32px; height: 32px; border-radius: 10px;
+.cant-btns { display: flex; gap: 8px; margin-top: 4px; }
+.cant-btns .step {
+  flex: 1; height: 36px; border-radius: 10px;
   background: var(--gris); border: none; color: var(--texto);
-  font-size: 20px; line-height: 1; cursor: pointer;
+  font-size: 22px; line-height: 1; cursor: pointer;
 }
-.cant-ctrl .step:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
-.cant-ctrl input {
-  flex: 1; min-width: 0; width: 100%;
-  border: none; background: none; padding: 0; border-radius: 0;
-  text-align: center; font-size: 19px; font-weight: 800; color: var(--texto);
-  font-variant-numeric: tabular-nums; font-family: 'Sora', sans-serif;
+.cant-btns .step:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.cant-display-num {
+  width: 100%; text-align: center; border: none; background: none; outline: none;
+  font-size: 36px; font-weight: 800; font-family: 'Sora', sans-serif;
+  color: var(--texto); font-variant-numeric: tabular-nums;
+  padding: 6px 0 0; cursor: pointer;
+  -webkit-appearance: none; appearance: none;
 }
-.cant-ctrl input:focus { outline: none; }
+.cant-display-num::-webkit-inner-spin-button,
+.cant-display-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
 /* Chips de unidad */
 .unidad-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
@@ -388,7 +391,20 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   font-size: 15px;
 }
 .lista-items li .nombre { flex: 1; }
-.lista-items li .cant { color: var(--gris-osc); font-size: 14px; font-weight: 600; }
+.li-cant { display: flex; align-items: center; gap: 4px; flex: none; }
+.cant-compra {
+  width: 46px; text-align: center; font-size: 14px; font-weight: 700;
+  font-family: 'Sora', sans-serif; font-variant-numeric: tabular-nums;
+  border: 1.5px solid var(--borde); border-radius: 8px;
+  background: var(--bg-elev); color: var(--texto);
+  padding: 4px 5px; outline: none; cursor: pointer;
+  -webkit-appearance: none; appearance: none;
+}
+.cant-compra::-webkit-inner-spin-button,
+.cant-compra::-webkit-outer-spin-button { -webkit-appearance: none; }
+.cant-compra:focus { border-color: var(--accent); }
+.li-unidad { font-size: 12px; color: var(--gris-osc); font-weight: 500; }
+.lista-items li.en-carrito .cant-compra { opacity: .6; }
 /* Cuadradito del carrito: cuadrado con esquinas redondeadas (no círculo) */
 .lista-items li input[type=checkbox] {
   width: 24px; height: 24px; flex: none; margin: 0;
@@ -415,7 +431,6 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 }
 .lista-items li.en-carrito { opacity: .6; }
 .lista-items li.en-carrito .nombre { text-decoration: line-through; }
-.lista-items li.en-carrito .cant { text-decoration: line-through; }
 .iconbtn {
   background: none; border: none; cursor: pointer;
   font-size: 17px; flex: none; padding: 0 4px; color: var(--gris-osc);
@@ -830,3 +845,46 @@ canvas { margin: 12px 0; max-height: 320px; }
 
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pop { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
+
+/* ===== Teclado numérico propio ===== */
+.numpad-overlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,.45);
+  display: flex; align-items: flex-end;
+}
+.numpad-sheet {
+  width: 100%; max-width: 600px; margin: 0 auto;
+  background: var(--bg-elev); border-radius: 22px 22px 0 0;
+  padding: 16px 16px 32px;
+  animation: sheetUp .22s ease;
+}
+.numpad-display {
+  text-align: center; font-size: 40px; font-weight: 800;
+  font-family: 'Sora', sans-serif; font-variant-numeric: tabular-nums;
+  color: var(--texto); padding: 4px 0 14px;
+  min-height: 60px;
+}
+.numpad-keys {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px;
+  margin-bottom: 12px;
+}
+.nk {
+  height: 60px; border-radius: 14px;
+  background: var(--card); border: .5px solid var(--borde);
+  font-size: 24px; font-weight: 700; font-family: 'Sora', sans-serif;
+  color: var(--texto); cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,.06);
+  transition: background .08s;
+}
+.nk:active { background: var(--gris); }
+.nk-special { font-size: 17px; background: var(--gris); }
+.numpad-footer {
+  display: flex; gap: 10px; margin-top: 4px;
+}
+.nk-cancel {
+  flex: 1; padding: 14px; border-radius: 14px;
+  background: var(--gris); border: none; font-size: 15px;
+  font-weight: 700; font-family: 'Nunito', sans-serif;
+  color: var(--texto); cursor: pointer;
+}
+.nk-ok { flex: 2; margin-top: 0; font-size: 15px; }
