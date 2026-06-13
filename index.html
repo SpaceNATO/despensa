@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=32" />
+  <link rel="stylesheet" href="styles.css?v=33" />
 </head>
 <body>
   <header>
@@ -99,7 +99,13 @@
     <!-- ====== LISTA ====== -->
     <section id="tab-lista" class="tab">
       <p class="hint">Lo que consumiste desde la última compra, más lo que tiene poco stock.</p>
-      <ul id="lista-compras" class="lista-items"></ul>
+      <div class="lista-card" id="lista-card">
+        <div class="lista-progreso" id="lista-progreso" style="display:none">
+          <div class="lista-prog-barra"><div class="lista-prog-fill" id="lista-prog-fill"></div></div>
+          <span class="lista-prog-texto" id="lista-prog-texto"></span>
+        </div>
+        <ul id="lista-compras" class="lista-items"></ul>
+      </div>
       <button id="btn-confirmar" class="btn-primary">Confirmar compra</button>
       <div class="row">
         <button id="btn-whatsapp" class="btn-secundario"><span data-ico="compartir"></span> Compartir</button>
@@ -241,7 +247,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
-  <script src="app.js?v=32"></script>
+  <script src="app.js?v=34"></script>
 
   <!-- Teclado QWERTY propio (desliza desde abajo) -->
   <div id="qwerty-overlay" class="numpad-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Teclado">

@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = 'v32';
+const APP_VERSION = 'v34';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -925,8 +925,10 @@ function renderLista() {
         <span class="nombre">${escapeHtml(it.producto)}<div class="fecha">${detalle}</div></span>
         <div class="li-cant">
           <button class="li-step" data-prod="${escapeHtml(it.producto)}" data-dir="-1">−</button>
-          <span class="li-num">${fmtCant(cantVal)}</span>
-          <span class="li-unidad">${escapeHtml(it.unidad)}</span>
+          <div class="li-num-wrap">
+            <span class="li-num">${fmtCant(cantVal)}</span>
+            <span class="li-unidad">${escapeHtml(it.unidad)}</span>
+          </div>
           <button class="li-step" data-prod="${escapeHtml(it.producto)}" data-dir="1">+</button>
         </div>
       </li>`;
@@ -941,11 +943,13 @@ function renderLista() {
   }));
   ul.querySelectorAll('input[type=checkbox]').forEach(chk => chk.addEventListener('change', () => {
     if (chk.checked) seleccionados.add(chk.dataset.prod); else seleccionados.delete(chk.dataset.prod);
-    chk.closest('li').classList.toggle('en-carrito', chk.checked); // tachar al instante
+    chk.closest('li').classList.toggle('en-carrito', chk.checked);
     guardarCarrito();
     actualizarBotonConfirmar();
+    actualizarProgreso();
   }));
   actualizarBotonConfirmar();
+  actualizarProgreso();
 }
 
 // El botón confirma lo del carrito; si no hay nada marcado, confirma toda la lista.
@@ -953,6 +957,21 @@ function actualizarBotonConfirmar() {
   const btn = document.getElementById('btn-confirmar');
   const n = seleccionados.size;
   btn.innerHTML = icono('check') + (n > 0 ? ` Confirmar compra (${n})` : ' Confirmar toda la lista');
+}
+
+function actualizarProgreso() {
+  const lis = document.querySelectorAll('#lista-compras li');
+  const total = lis.length;
+  const marcados = document.querySelectorAll('#lista-compras input[type=checkbox]:checked').length;
+  const prog = document.getElementById('lista-progreso');
+  const fill = document.getElementById('lista-prog-fill');
+  const texto = document.getElementById('lista-prog-texto');
+  if (!prog) return;
+  if (total === 0) { prog.style.display = 'none'; return; }
+  prog.style.display = 'flex';
+  const pct = Math.round((marcados / total) * 100);
+  fill.style.width = pct + '%';
+  texto.textContent = marcados + '/' + total;
 }
 
 function ejecutarConfirmarCompra(aComprar, cantidades) {

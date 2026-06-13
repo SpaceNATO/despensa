@@ -380,17 +380,45 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .sugerencias div:last-child { border-bottom: none; }
 .sugerencias div.activa { background: var(--gris); }
 
+/* ===== Tarjeta lista de compras ===== */
+.lista-card {
+  background: var(--card);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.lista-progreso {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--borde);
+}
+.lista-prog-barra {
+  flex: 1; height: 6px; background: var(--gris);
+  border-radius: 99px; overflow: hidden;
+}
+.lista-prog-fill {
+  height: 100%; background: var(--accent);
+  border-radius: 99px; transition: width .3s ease;
+  min-width: 0;
+}
+.lista-prog-texto {
+  font-size: 13px; font-weight: 700;
+  font-family: 'Sora', sans-serif;
+  color: var(--accent); flex: none;
+}
+
 .lista-items { list-style: none; }
 .lista-items li {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 4px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--borde);
   font-size: 15px;
 }
+.lista-items li:last-child { border-bottom: none; }
 .lista-items li .nombre { flex: 1; }
-.li-cant { display: flex; align-items: center; gap: 4px; flex: none; }
+.li-cant { display: flex; align-items: center; gap: 6px; flex: none; }
 .li-step {
   width: 30px; height: 30px; border-radius: 50%; flex: none;
   background: color-mix(in srgb, var(--accent) 13%, transparent);
@@ -400,12 +428,20 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   font-weight: 700; touch-action: manipulation;
 }
 .li-step:active { background: color-mix(in srgb, var(--accent) 28%, transparent); }
-.li-num {
-  min-width: 26px; text-align: right; font-size: 15px; font-weight: 700;
-  font-family: 'Sora', sans-serif; font-variant-numeric: tabular-nums;
-  color: var(--texto);
+.li-num-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+  min-width: 28px;
 }
-.li-unidad { font-size: 11px; color: var(--gris-osc); font-weight: 600; }
+.li-num {
+  text-align: center; font-size: 15px; font-weight: 700;
+  font-family: 'Sora', sans-serif; font-variant-numeric: tabular-nums;
+  color: var(--texto); line-height: 1.1;
+}
+.li-unidad {
+  font-size: 9px; color: var(--gris-osc); font-weight: 600;
+  text-align: center; line-height: 1.2; text-transform: uppercase;
+  letter-spacing: .3px;
+}
 /* Cuadradito del carrito: cuadrado con esquinas redondeadas (no círculo) */
 .lista-items li input[type=checkbox] {
   width: 24px; height: 24px; flex: none; margin: 0;
