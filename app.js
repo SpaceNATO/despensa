@@ -22,6 +22,8 @@ let datos = cargarDatos();
 Object.values(datos.stock).forEach(st => { if (!(st.max > 0) && st.actual > 0) st.max = st.actual; });
 guardarDatos();
 
+const isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
 // ===== NUBE: compartir la despensa entre celulares (Firebase) =====
 // En "modo casa" los datos viven en Firestore y se sincronizan en vivo.
 // Sin casa, todo sigue igual que siempre (solo en este teléfono).
@@ -392,6 +394,7 @@ form.addEventListener('submit', (e) => {
   toast(`Agregado: ${producto}`);
   form.reset();
   document.getElementById('cantidad').value = 1;
+  cantNumSpan.textContent = '1';
   inputCategoria.value = ultimaCat; // no volver siempre a "Almacén"
   sincronizarChips(inputUnidad.value);
   inputCategoria.dispatchEvent(new Event('change'));
@@ -595,9 +598,12 @@ inputProducto.addEventListener('keydown', (e) => {
 
 // ----- Botones − / + de la cantidad -----
 const inputCantidad = document.getElementById('cantidad');
+const cantNumSpan = document.getElementById('cant-num');
 function pasoCantidad(delta) {
   const v = parseFloat(inputCantidad.value) || 0;
-  inputCantidad.value = Math.max(0, Math.round((v + delta) * 100) / 100);
+  const nuevo = Math.max(0, Math.round((v + delta) * 100) / 100);
+  inputCantidad.value = nuevo;
+  cantNumSpan.textContent = fmtCant(nuevo || 0);
 }
 document.getElementById('cant-menos').addEventListener('click', () => pasoCantidad(-1));
 document.getElementById('cant-mas').addEventListener('click', () => pasoCantidad(1));
@@ -785,9 +791,9 @@ function renderStock() {
           <div class="si-top">
             <div class="si-info"><div class="si-nombre">${escapeHtml(n)} <small>${escapeHtml(cat[n].unidad)}</small> ${badge}</div></div>
             <div class="si-ctrl">
-              <input class="stock-actual" type="number" step="any" data-prod="${escapeHtml(n)}" value="${st.actual}" />
+              <span class="stock-actual-val">${fmtCant(st.actual)}</span>
             </div>
-            <label class="si-min">MÍN<input class="stock-minimo" type="number" step="any" data-prod="${escapeHtml(n)}" value="${st.minimo}" /></label>
+            <label class="si-min">MÍN<input class="stock-minimo" type="number" step="any" inputmode="decimal" data-prod="${escapeHtml(n)}" value="${st.minimo}" /></label>
           </div>
           <div class="si-barra"><span style="width:${pct}%"></span></div>
         </div>`;
@@ -835,16 +841,20 @@ function renderStock() {
     return datos.stock[prod];
   }
   const maxDe = prod => (datos.stock[prod] && datos.stock[prod].max) || 0;
-  cont.querySelectorAll('.stock-actual').forEach(inp => inp.addEventListener('change', () => {
-    const p = inp.dataset.prod, v = parseFloat(inp.value) || 0;
-    if (enCasa()) { nubeSetStockCampo(p, 'actual', v); if (v > ((datos.stock[p] && datos.stock[p].actual) || 0)) nubeSetStockCampo(p, 'max', v); return; }
-    const s = asegurar(p); if (v > (s.actual || 0)) s.max = v; s.actual = v; guardarDatos(); renderStock(); renderLista();
-  }));
-  cont.querySelectorAll('.stock-minimo').forEach(inp => inp.addEventListener('change', () => {
-    const p = inp.dataset.prod, v = parseFloat(inp.value) || 0;
-    if (enCasa()) { nubeSetStockCampo(p, 'minimo', v); return; }
-    asegurar(p).minimo = v; guardarDatos(); renderStock(); renderLista();
-  }));
+  cont.querySelectorAll('.stock-minimo').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const p = inp.dataset.prod, v = parseFloat(inp.value) || 0;
+      if (enCasa()) { nubeSetStockCampo(p, 'minimo', v); return; }
+      asegurar(p).minimo = v; guardarDatos(); renderStock(); renderLista();
+    });
+    if (isTouchDevice) {
+      inp.setAttribute('readonly', '');
+      inp.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        abrirNumpad(inp, null);
+      }, { passive: false });
+    }
+  });
 }
 // La alerta de arriba despliega/pliega la lista de urgentes
 document.getElementById('stock-alerta').addEventListener('click', () => {
@@ -878,6 +888,8 @@ function listaPendiente() {
 
 // El "carrito" (productos que ya pusiste en el changuito) se guarda para no perderlo.
 const seleccionados = new Set(datos.carrito);
+// Cantidades editadas en la lista de compras (persisten mientras la lista está abierta)
+const listaCantidades = new Map();
 
 function guardarCarrito() {
   if (enCasa()) { nubeSetCarrito([...seleccionados]); return; }
@@ -895,23 +907,38 @@ function renderLista() {
     return;
   }
   acciones.forEach(id => document.getElementById(id).style.display = '');
+  // Inicializar cantidades para ítems nuevos
+  items.forEach(it => {
+    if (!listaCantidades.has(it.producto)) {
+      listaCantidades.set(it.producto, it.cantidad > 0 ? it.cantidad : 1);
+    }
+  });
   ul.innerHTML = items.map(it => {
     const detalle = it.stockBajo
       ? `${escapeHtml(it.categoria)} · ${icono('bajando')} poco stock`
       : escapeHtml(it.categoria);
-    const cantVal = it.cantidad > 0 ? fmtCant(it.cantidad) : 1;
+    const cantVal = listaCantidades.get(it.producto) || 1;
     const enCarrito = seleccionados.has(it.producto);
     return `
       <li class="${enCarrito ? 'en-carrito' : ''}">
         <input type="checkbox" title="Marcar como puesto en el carrito" data-prod="${escapeHtml(it.producto)}" ${enCarrito ? 'checked' : ''} />
         <span class="nombre">${escapeHtml(it.producto)}<div class="fecha">${detalle}</div></span>
         <div class="li-cant">
-          <input type="number" class="cant-compra" data-prod="${escapeHtml(it.producto)}"
-            value="${cantVal}" min="0.1" step="any" inputmode="none" />
+          <button class="li-step" data-prod="${escapeHtml(it.producto)}" data-dir="-1">−</button>
+          <span class="li-num">${fmtCant(cantVal)}</span>
+          <button class="li-step" data-prod="${escapeHtml(it.producto)}" data-dir="1">+</button>
           <span class="li-unidad">${escapeHtml(it.unidad)}</span>
         </div>
       </li>`;
   }).join('');
+  ul.querySelectorAll('.li-step').forEach(btn => btn.addEventListener('click', () => {
+    const prod = btn.dataset.prod;
+    const dir = parseInt(btn.dataset.dir, 10);
+    const cur = listaCantidades.get(prod) || 1;
+    const nuevo = Math.max(1, Math.round((cur + dir) * 100) / 100);
+    listaCantidades.set(prod, nuevo);
+    btn.closest('.li-cant').querySelector('.li-num').textContent = fmtCant(nuevo);
+  }));
   ul.querySelectorAll('input[type=checkbox]').forEach(chk => chk.addEventListener('change', () => {
     if (chk.checked) seleccionados.add(chk.dataset.prod); else seleccionados.delete(chk.dataset.prod);
     chk.closest('li').classList.toggle('en-carrito', chk.checked); // tachar al instante
@@ -957,9 +984,9 @@ document.getElementById('btn-confirmar').addEventListener('click', () => {
   const aComprar = seleccionados.size > 0 ? new Set(seleccionados) : new Set(items.map(i => i.producto));
   if (aComprar.size === 0) return;
   const cantidades = {};
-  document.querySelectorAll('.cant-compra').forEach(inp => {
-    const v = parseFloat(inp.value);
-    if (v > 0) cantidades[inp.dataset.prod] = v;
+  items.forEach(it => {
+    const v = listaCantidades.get(it.producto) || (it.cantidad > 0 ? it.cantidad : 1);
+    if (v > 0) cantidades[it.producto] = v;
   });
   const n = aComprar.size;
   const mensaje = seleccionados.size > 0
@@ -1741,12 +1768,12 @@ if ('serviceWorker' in navigator) {
 }
 
 // ===== Teclado numérico propio =====
-let numpadTarget = null;
+let numpadTarget = null;   // el <input> cuyo value se actualiza
 let numpadValor = '';
 
 function abrirNumpad(inputEl) {
   numpadTarget = inputEl;
-  numpadValor = String(inputEl.value || '');
+  numpadValor = String(parseFloat(inputEl.value) || '');
   document.getElementById('numpad-display').textContent = numpadValor || '0';
   document.getElementById('numpad-overlay').style.display = 'flex';
 }
@@ -1767,8 +1794,13 @@ document.querySelectorAll('.nk[data-k]').forEach(btn => {
       if (numpadValor === '0' || numpadValor === '') numpadValor = k;
       else numpadValor += k;
     }
-    document.getElementById('numpad-display').textContent = numpadValor || '0';
-    if (numpadTarget) numpadTarget.value = numpadValor;
+    const display = numpadValor || '0';
+    document.getElementById('numpad-display').textContent = display;
+    // Actualizar el input target Y el #cant-num si es la cantidad principal
+    if (numpadTarget) {
+      numpadTarget.value = numpadValor;
+      if (numpadTarget === inputCantidad) cantNumSpan.textContent = display;
+    }
   });
 });
 
@@ -1777,6 +1809,7 @@ document.getElementById('numpad-ok').addEventListener('click', () => {
   if (numpadTarget) {
     const v = numpadValor !== '' ? numpadValor : '0';
     numpadTarget.value = v;
+    if (numpadTarget === inputCantidad) cantNumSpan.textContent = fmtCant(parseFloat(v) || 0);
     numpadTarget.dispatchEvent(new Event('change', { bubbles: true }));
   }
   cerrarNumpad();
@@ -1785,13 +1818,5 @@ document.getElementById('numpad-overlay').addEventListener('click', (e) => {
   if (e.target === document.getElementById('numpad-overlay')) cerrarNumpad();
 });
 
-// Interceptar taps sobre #cantidad y .cant-compra para abrir numpad
-document.getElementById('cantidad').addEventListener('pointerdown', (e) => {
-  if (e.pointerType === 'touch') { e.preventDefault(); abrirNumpad(e.currentTarget); }
-});
-document.addEventListener('pointerdown', (e) => {
-  if (e.pointerType === 'touch') {
-    const target = e.target.closest('.cant-compra');
-    if (target) { e.preventDefault(); abrirNumpad(target); }
-  }
-});
+// Tocar el número de cantidad abre el numpad (no hay input visible = no hay teclado nativo)
+cantNumSpan.addEventListener('click', () => abrirNumpad(inputCantidad));

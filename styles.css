@@ -186,26 +186,22 @@ h3 { font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 700; color: 
   font-size: 10.5px; font-weight: 800; letter-spacing: 0.6px;
   text-transform: uppercase; color: var(--gris-osc); margin: 0;
 }
-.cant-wrapper { width: 148px; flex: none; display: flex; flex-direction: column; }
-.subcard-cantidad { width: 100%; }
-.subcard-unidad { flex: 1; min-width: 0; }
+.subcard-cantidad { width: 148px; flex: none; }
+.subcard-unidad { flex: 1; min-width: 0; padding-bottom: 8px; }
 .subcard-categoria { width: 100%; margin-top: 12px; }
-.cant-btns { display: flex; gap: 8px; margin-top: 4px; }
-.cant-btns .step {
-  flex: 1; height: 36px; border-radius: 10px;
+.cant-ctrl { display: flex; align-items: center; gap: 4px; }
+.cant-ctrl .step {
+  flex: none; width: 36px; height: 36px; border-radius: 10px;
   background: var(--gris); border: none; color: var(--texto);
   font-size: 22px; line-height: 1; cursor: pointer;
 }
-.cant-btns .step:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
-.cant-display-num {
-  width: 100%; text-align: center; border: none; background: none; outline: none;
-  font-size: 36px; font-weight: 800; font-family: 'Sora', sans-serif;
-  color: var(--texto); font-variant-numeric: tabular-nums;
-  padding: 6px 0 0; cursor: pointer;
-  -webkit-appearance: none; appearance: none;
+.cant-ctrl .step:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.cant-num {
+  flex: 1; text-align: center; font-size: 26px; font-weight: 800;
+  font-family: 'Sora', sans-serif; font-variant-numeric: tabular-nums;
+  color: var(--texto); cursor: pointer; user-select: none;
+  line-height: 1; padding: 2px 0;
 }
-.cant-display-num::-webkit-inner-spin-button,
-.cant-display-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
 /* Chips de unidad */
 .unidad-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
@@ -391,20 +387,19 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   font-size: 15px;
 }
 .lista-items li .nombre { flex: 1; }
-.li-cant { display: flex; align-items: center; gap: 4px; flex: none; }
-.cant-compra {
-  width: 46px; text-align: center; font-size: 14px; font-weight: 700;
-  font-family: 'Sora', sans-serif; font-variant-numeric: tabular-nums;
-  border: 1.5px solid var(--borde); border-radius: 8px;
-  background: var(--bg-elev); color: var(--texto);
-  padding: 4px 5px; outline: none; cursor: pointer;
-  -webkit-appearance: none; appearance: none;
+.li-cant { display: flex; align-items: center; gap: 5px; flex: none; }
+.li-step {
+  width: 28px; height: 28px; border-radius: 8px; flex: none;
+  background: var(--gris); border: none; color: var(--texto);
+  font-size: 18px; line-height: 1; cursor: pointer;
 }
-.cant-compra::-webkit-inner-spin-button,
-.cant-compra::-webkit-outer-spin-button { -webkit-appearance: none; }
-.cant-compra:focus { border-color: var(--accent); }
+.li-step:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.li-num {
+  min-width: 34px; text-align: center; font-size: 14px; font-weight: 700;
+  font-family: 'Sora', sans-serif; font-variant-numeric: tabular-nums;
+  color: var(--texto);
+}
 .li-unidad { font-size: 12px; color: var(--gris-osc); font-weight: 500; }
-.lista-items li.en-carrito .cant-compra { opacity: .6; }
 /* Cuadradito del carrito: cuadrado con esquinas redondeadas (no círculo) */
 .lista-items li input[type=checkbox] {
   width: 24px; height: 24px; flex: none; margin: 0;
@@ -540,11 +535,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   background: var(--gris); border: 1px solid var(--borde); color: var(--texto);
   font-size: 19px; line-height: 1;
 }
-.stock-actual {
+.stock-actual-val {
   width: 42px; text-align: center; font-weight: 700; font-size: 16px;
-  border: none !important; background: none; padding: 0 !important; color: var(--texto);
+  color: var(--texto); display: inline-block;
 }
-.stock-actual:focus { outline: none; }
 .si-min {
   flex: none; display: flex; flex-direction: column; align-items: center; gap: 1px;
   font-size: 9px; font-weight: 700; letter-spacing: .5px; color: var(--gris-osc);
