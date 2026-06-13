@@ -849,10 +849,7 @@ function renderStock() {
     });
     if (isTouchDevice) {
       inp.setAttribute('readonly', '');
-      inp.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        abrirNumpad(inp, null);
-      }, { passive: false });
+      inp.addEventListener('click', () => abrirNumpad(inp));
     }
   });
 }
@@ -1770,12 +1767,14 @@ if ('serviceWorker' in navigator) {
 // ===== Teclado numérico propio =====
 let numpadTarget = null;   // el <input> cuyo value se actualiza
 let numpadValor = '';
+let _numpadOpenAt = 0;
 
 function abrirNumpad(inputEl) {
   numpadTarget = inputEl;
   numpadValor = String(parseFloat(inputEl.value) || '');
   document.getElementById('numpad-display').textContent = numpadValor || '0';
   document.getElementById('numpad-overlay').style.display = 'flex';
+  _numpadOpenAt = Date.now();
 }
 function cerrarNumpad() {
   document.getElementById('numpad-overlay').style.display = 'none';
@@ -1815,19 +1814,16 @@ document.getElementById('numpad-ok').addEventListener('click', () => {
   cerrarNumpad();
 });
 document.getElementById('numpad-overlay').addEventListener('click', (e) => {
-  if (e.target === document.getElementById('numpad-overlay')) cerrarNumpad();
+  if (e.target === document.getElementById('numpad-overlay') && Date.now() - _numpadOpenAt > 350) cerrarNumpad();
 });
 
-// Tocar el número de cantidad abre el numpad
+// Tocar el número de cantidad abre el numpad (click funciona en móvil y desktop)
 cantNumSpan.addEventListener('click', () => abrirNumpad(inputCantidad));
-cantNumSpan.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  abrirNumpad(inputCantidad);
-}, { passive: false });
 
 // ===== Teclado QWERTY propio =====
 let qwertyValor = '';
-let qwertyShift = true; // empieza en mayúscula
+let qwertyShift = true;
+let _qwertyOpenAt = 0;
 let qwertyCaps = false;
 let qwertyMode = 'alpha';
 let qwertyTarget = null;
@@ -1855,6 +1851,7 @@ function abrirQwerty(inputEl) {
   _qBuildGrid();
   _qActualizarSugs();
   document.getElementById('qwerty-overlay').style.display = 'flex';
+  _qwertyOpenAt = Date.now();
 }
 function cerrarQwerty() {
   document.getElementById('qwerty-overlay').style.display = 'none';
@@ -1930,20 +1927,11 @@ document.getElementById('qwerty-ok').addEventListener('click', () => {
   cerrarQwerty();
 });
 document.getElementById('qwerty-overlay').addEventListener('click', (e) => {
-  if (e.target === document.getElementById('qwerty-overlay')) cerrarQwerty();
+  if (e.target === document.getElementById('qwerty-overlay') && Date.now() - _qwertyOpenAt > 350) cerrarQwerty();
 });
 
 // Interceptar el campo Producto en dispositivos táctiles
 if (isTouchDevice) {
   inputProducto.setAttribute('readonly', '');
-  inputProducto.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    abrirQwerty(inputProducto);
-  }, { passive: false });
-  // También el botón de lupa/campo producto
-  document.querySelector('.card-producto').addEventListener('click', (e) => {
-    if (!document.getElementById('qwerty-overlay').style.display || document.getElementById('qwerty-overlay').style.display === 'none') {
-      abrirQwerty(inputProducto);
-    }
-  });
+  inputProducto.addEventListener('click', () => abrirQwerty(inputProducto));
 }
