@@ -477,6 +477,23 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   touch-action: manipulation; letter-spacing: .2px;
 }
 .btn-agregar-lista:active { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
+/* ===== Datos cargados ===== */
+.datos-vacio { color: var(--gris-osc); text-align: center; padding: 24px 0; font-size: 14px; }
+.datos-fila { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--borde); }
+.datos-fila:last-child { border-bottom: none; }
+.datos-nombre { flex: 1; font-size: 14px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.datos-select { font-size: 12px; padding: 5px 6px; border-radius: 8px; border: 1.5px solid var(--borde); background: var(--bg-elev); color: var(--texto); font-family: 'Nunito', inherit; flex: none; }
+.datos-select:focus { outline: none; border-color: var(--accent); }
+
+/* ===== Gestionar unidades y categorías ===== */
+.gestor-seccion { margin-bottom: 20px; }
+.gestor-seccion h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gris-osc); margin-bottom: 8px; }
+.gestor-fila { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--borde); }
+.gestor-fila:last-child { border-bottom: none; }
+.gestor-nombre { flex: 1; font-size: 14px; }
+.gestor-base { opacity: .45; font-style: italic; }
+
 .iconbtn {
   background: none; border: none; cursor: pointer;
   font-size: 17px; flex: none; padding: 0 4px; color: var(--gris-osc);

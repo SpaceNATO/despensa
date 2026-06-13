@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=38" />
+  <link rel="stylesheet" href="styles.css?v=39" />
 </head>
 <body>
   <header>
@@ -193,8 +193,38 @@
         <button type="button" id="btn-compartir" class="modo-btn" style="width:100%"><span data-ico="personas" aria-hidden="true"></span> <span id="compartir-estado">Compartir con otra persona</span></button>
       </div>
 
+      <div class="ajuste-seccion">
+        <h3>Datos cargados</h3>
+        <button type="button" id="btn-datos-cargados" class="modo-btn" style="width:100%">Ver y editar productos conocidos</button>
+      </div>
+
+      <div class="ajuste-seccion">
+        <h3>Unidades y categorías</h3>
+        <button type="button" id="btn-gestor-uc" class="modo-btn" style="width:100%">Gestionar unidades y categorías</button>
+      </div>
+
       <p id="ajustes-version" style="text-align:center;font-size:.75rem;opacity:.45;margin:8px 0 0"></p>
       <button id="ajustes-cerrar" class="btn-primary">Listo</button>
+    </div>
+  </div>
+
+  <!-- Panel: Datos cargados -->
+  <div id="datos-overlay" class="sheet-overlay" style="display:none">
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="sheet-handle"></div>
+      <h2 class="sheet-titulo">Productos conocidos</h2>
+      <div id="datos-lista"></div>
+      <button id="datos-cerrar" class="btn-primary" style="margin-top:16px">Listo</button>
+    </div>
+  </div>
+
+  <!-- Panel: Gestionar unidades y categorías -->
+  <div id="gestor-overlay" class="sheet-overlay" style="display:none">
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="sheet-handle"></div>
+      <h2 class="sheet-titulo">Unidades y categorías</h2>
+      <div id="gestor-contenido"></div>
+      <button id="gestor-cerrar" class="btn-primary" style="margin-top:16px">Listo</button>
     </div>
   </div>
 
@@ -293,7 +323,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
-  <script src="app.js?v=38"></script>
+  <script src="app.js?v=39"></script>
 
   <!-- Teclado QWERTY propio (desliza desde abajo) -->
   <div id="qwerty-overlay" class="numpad-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Teclado">

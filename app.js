@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.38';
+const APP_VERSION = '0.39';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -1808,6 +1808,150 @@ function renderSwatches(contId, lista, actual, onPick) {
   add.addEventListener('click', () => abrirRueda(inicial, (hex) => { onPick(hex); renderAjustes(); }));
   cont.appendChild(add);
 }
+
+// ===== Datos cargados =====
+const UNIDADES_BASE_SET = new Set(UNIDADES_LISTA_BASE);
+const CATEGORIAS_BASE_SET = new Set(CATEGORIAS_LISTA_BASE);
+
+function todosProductosConocidos() {
+  const map = {};
+  for (const c of datos.consumos) {
+    if (!map[c.producto]) map[c.producto] = { unidad: c.unidad, categoria: c.categoria };
+  }
+  const cat = catalogo();
+  for (const prod of Object.keys(datos.stock)) {
+    if (!map[prod]) map[prod] = cat[prod] || { unidad: 'u', categoria: 'Otros' };
+  }
+  try {
+    const db = JSON.parse(localStorage.getItem('despensa_items_extra') || '{}');
+    for (const [p, info] of Object.entries(db)) { if (!map[p]) map[p] = info; }
+  } catch {}
+  return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+}
+
+function rebuildDropdownCategoria() {
+  while (inputCategoria.options.length) inputCategoria.remove(0);
+  [...new Set([...CATEGORIAS_LISTA_BASE, ...categoriasPropias()])].forEach(v => inputCategoria.add(new Option(v, v)));
+  const cs = inputCategoria.closest('.cs');
+  if (cs && cs._rebuild) cs._rebuild();
+}
+
+function rebuildDropdownUnidad() {
+  const base = [...inputUnidad.options].filter(o => UNIDADES_BASE_SET.has(o.value)).map(o => o.value);
+  while (inputUnidad.options.length) inputUnidad.remove(0);
+  [...new Set([...base, ...unidadesPropias()])].forEach(v => inputUnidad.add(new Option(v === 'paquete' ? 'paq.' : v, v)));
+}
+
+const datosOverlay = document.getElementById('datos-overlay');
+
+function renderDatosPanel() {
+  const lista = document.getElementById('datos-lista');
+  const prods = todosProductosConocidos();
+  const todas_u = [...new Set([...UNIDADES_LISTA_BASE, ...unidadesPropias()])];
+  const todas_c = [...new Set([...CATEGORIAS_LISTA_BASE, ...categoriasPropias()])];
+  if (!prods.length) { lista.innerHTML = '<p class="datos-vacio">No hay productos cargados aún.</p>'; return; }
+  lista.innerHTML = prods.map(([nombre, info]) => `
+    <div class="datos-fila">
+      <span class="datos-nombre">${escapeHtml(nombre)}</span>
+      <select class="datos-select" data-prod="${escapeHtml(nombre)}" data-campo="unidad">
+        ${todas_u.map(v => `<option value="${escapeHtml(v)}"${info.unidad === v ? ' selected' : ''}>${escapeHtml(v)}</option>`).join('')}
+      </select>
+      <select class="datos-select" data-prod="${escapeHtml(nombre)}" data-campo="categoria">
+        ${todas_c.map(v => `<option value="${escapeHtml(v)}"${info.categoria === v ? ' selected' : ''}>${escapeHtml(v)}</option>`).join('')}
+      </select>
+    </div>`).join('');
+  lista.querySelectorAll('.datos-select').forEach(sel => sel.addEventListener('change', () => {
+    const prod = sel.dataset.prod;
+    const fila = sel.closest('.datos-fila');
+    propagarInfoProducto(prod, fila.querySelector('[data-campo="unidad"]').value, fila.querySelector('[data-campo="categoria"]').value);
+  }));
+}
+
+addTap(document.getElementById('btn-datos-cargados'), () => { renderDatosPanel(); datosOverlay.style.display = 'flex'; });
+document.getElementById('datos-cerrar').addEventListener('click', () => { datosOverlay.style.display = 'none'; });
+datosOverlay.addEventListener('click', e => { if (e.target === datosOverlay) datosOverlay.style.display = 'none'; });
+
+// ===== Gestionar unidades y categorías =====
+const gestorOverlay = document.getElementById('gestor-overlay');
+
+function renderGestorPanel() {
+  const cont = document.getElementById('gestor-contenido');
+  cont.innerHTML = '';
+
+  function hacerSeccion(titulo, todosItems, esBase, onRenombrar, onEliminar) {
+    const sec = document.createElement('div');
+    sec.className = 'gestor-seccion';
+    sec.innerHTML = `<h4>${titulo}</h4>`;
+    todosItems.forEach(nombre => {
+      const fila = document.createElement('div');
+      fila.className = 'gestor-fila';
+      const span = document.createElement('span');
+      span.className = 'gestor-nombre' + (esBase(nombre) ? ' gestor-base' : '');
+      span.textContent = nombre;
+      fila.appendChild(span);
+      if (!esBase(nombre)) {
+        const btnRen = document.createElement('button');
+        btnRen.className = 'iconbtn'; btnRen.title = 'Renombrar';
+        btnRen.innerHTML = icono('lapiz');
+        addTap(btnRen, () => abrirPrompt(`Renombrar "${nombre}":`, nombre, nuevo => {
+          nuevo = nuevo.trim();
+          if (!nuevo || nuevo === nombre) return;
+          onRenombrar(nombre, nuevo); renderGestorPanel();
+        }));
+        const btnDel = document.createElement('button');
+        btnDel.className = 'iconbtn borrar'; btnDel.title = 'Eliminar';
+        btnDel.textContent = '✕';
+        addTap(btnDel, () => abrirConfirm(`¿Eliminar "${nombre}"?`, () => { onEliminar(nombre); renderGestorPanel(); }));
+        fila.appendChild(btnRen); fila.appendChild(btnDel);
+      }
+      sec.appendChild(fila);
+    });
+    return sec;
+  }
+
+  function renombrarEnConsumosYExtras(campo, viejo, nuevo) {
+    datos.consumos.forEach(c => {
+      if (c[campo] === viejo) { if (enCasa()) nubeEditarConsumo(c.id, { [campo]: nuevo }); c[campo] = nuevo; }
+    });
+    if (!enCasa()) guardarDatos();
+    listaExtras.forEach(e => { if (e[campo] === viejo) e[campo] = nuevo; });
+    try {
+      const db = JSON.parse(localStorage.getItem('despensa_items_extra') || '{}');
+      for (const p of Object.keys(db)) { if (db[p][campo] === viejo) db[p][campo] = nuevo; }
+      localStorage.setItem('despensa_items_extra', JSON.stringify(db));
+    } catch {}
+  }
+
+  const todasCats = [...new Set([...CATEGORIAS_LISTA_BASE, ...categoriasPropias()])];
+  cont.appendChild(hacerSeccion('Categorías', todasCats, c => CATEGORIAS_BASE_SET.has(c),
+    (viejo, nuevo) => {
+      renombrarEnConsumosYExtras('categoria', viejo, nuevo);
+      localStorage.setItem('despensa_categorias', JSON.stringify(categoriasPropias().map(c => c === viejo ? nuevo : c)));
+      rebuildDropdownCategoria();
+    },
+    nombre => {
+      localStorage.setItem('despensa_categorias', JSON.stringify(categoriasPropias().filter(c => c !== nombre)));
+      rebuildDropdownCategoria();
+    }
+  ));
+
+  const todasUnids = [...new Set([...UNIDADES_LISTA_BASE, ...unidadesPropias()])];
+  cont.appendChild(hacerSeccion('Unidades', todasUnids, u => UNIDADES_BASE_SET.has(u),
+    (viejo, nuevo) => {
+      renombrarEnConsumosYExtras('unidad', viejo, nuevo);
+      localStorage.setItem('despensa_unidades', JSON.stringify(unidadesPropias().map(u => u === viejo ? nuevo : u)));
+      rebuildDropdownUnidad();
+    },
+    nombre => {
+      localStorage.setItem('despensa_unidades', JSON.stringify(unidadesPropias().filter(u => u !== nombre)));
+      rebuildDropdownUnidad();
+    }
+  ));
+}
+
+addTap(document.getElementById('btn-gestor-uc'), () => { renderGestorPanel(); gestorOverlay.style.display = 'flex'; });
+document.getElementById('gestor-cerrar').addEventListener('click', () => { gestorOverlay.style.display = 'none'; });
+gestorOverlay.addEventListener('click', e => { if (e.target === gestorOverlay) gestorOverlay.style.display = 'none'; });
 
 function renderAjustes() {
   document.getElementById('ajustes-version').textContent = 'Mi Despensa ' + APP_VERSION;
