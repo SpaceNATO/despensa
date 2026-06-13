@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.40';
+const APP_VERSION = '0.41';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -494,8 +494,23 @@ function guardarCategoriaPropia(nombre) {
   const lista = categoriasPropias();
   if (!lista.includes(nombre)) { lista.push(nombre); localStorage.setItem('despensa_categorias', JSON.stringify(lista)); }
 }
+
+// Overrides para renombrar ítems predeterminados
+function catOverrides() { try { return JSON.parse(localStorage.getItem('despensa_cat_ov') || '{}'); } catch { return {}; } }
+function unidOverrides() { try { return JSON.parse(localStorage.getItem('despensa_unid_ov') || '{}'); } catch { return {}; } }
+function categoriasEfectivas() {
+  const ov = catOverrides();
+  const base = CATEGORIAS_LISTA_BASE.map(c => ov[c] || c);
+  return [...new Set([...base, ...categoriasPropias()])];
+}
+function unidadesEfectivas() {
+  const ov = unidOverrides();
+  const base = UNIDADES_LISTA_BASE.map(u => ov[u] || u);
+  return [...new Set([...base, ...unidadesPropias()])];
+}
+
 // Inyectar las guardadas en el <select> antes de armar el dropdown
-categoriasPropias().forEach(nombre => {
+categoriasEfectivas().forEach(nombre => {
   if (![...inputCategoria.options].some(o => o.value === nombre)) inputCategoria.add(new Option(nombre, nombre));
 });
 
@@ -1831,15 +1846,14 @@ function todosProductosConocidos() {
 
 function rebuildDropdownCategoria() {
   while (inputCategoria.options.length) inputCategoria.remove(0);
-  [...new Set([...CATEGORIAS_LISTA_BASE, ...categoriasPropias()])].forEach(v => inputCategoria.add(new Option(v, v)));
+  categoriasEfectivas().forEach(v => inputCategoria.add(new Option(v, v)));
   const cs = inputCategoria.closest('.cs');
   if (cs && cs._rebuild) cs._rebuild();
 }
 
 function rebuildDropdownUnidad() {
-  const base = [...inputUnidad.options].filter(o => UNIDADES_BASE_SET.has(o.value)).map(o => o.value);
   while (inputUnidad.options.length) inputUnidad.remove(0);
-  [...new Set([...base, ...unidadesPropias()])].forEach(v => inputUnidad.add(new Option(v === 'paquete' ? 'paq.' : v, v)));
+  unidadesEfectivas().forEach(v => inputUnidad.add(new Option(v === 'paquete' ? 'paq.' : v, v)));
 }
 
 const datosOverlay = document.getElementById('datos-overlay');
@@ -1847,8 +1861,6 @@ const datosOverlay = document.getElementById('datos-overlay');
 function renderDatosPanel() {
   const lista = document.getElementById('datos-lista');
   const prods = todosProductosConocidos();
-  const todas_u = [...new Set([...UNIDADES_LISTA_BASE, ...unidadesPropias()])];
-  const todas_c = [...new Set([...CATEGORIAS_LISTA_BASE, ...categoriasPropias()])];
   lista.innerHTML = '';
   if (!prods.length) { lista.innerHTML = '<p class="datos-vacio">No hay productos cargados aún.</p>'; return; }
 
@@ -1856,7 +1868,6 @@ function renderDatosPanel() {
     const fila = document.createElement('div');
     fila.className = 'datos-fila';
 
-    // Nombre editable
     const inp = document.createElement('input');
     inp.type = 'text'; inp.className = 'datos-nombre-input';
     inp.value = nombre; inp.dataset.original = nombre;
@@ -1868,27 +1879,21 @@ function renderDatosPanel() {
     });
     fila.appendChild(inp);
 
-    const campos = document.createElement('div');
-    campos.className = 'datos-campos';
-
-    // Select de unidad (nativo, pequeño)
     const selU = document.createElement('select');
-    selU.className = 'datos-select-u';
-    todas_u.forEach(v => { const o = new Option(v, v); if (v === info.unidad) o.selected = true; selU.add(o); });
-    campos.appendChild(selU);
+    unidadesEfectivas().forEach(v => { const o = new Option(v, v); if (v === info.unidad) o.selected = true; selU.add(o); });
+    fila.appendChild(selU);
 
-    // Select de categoría → custom dropdown
     const selC = document.createElement('select');
-    todas_c.forEach(v => { const o = new Option(v, v); if (v === info.categoria) o.selected = true; selC.add(o); });
-    campos.appendChild(selC);
+    categoriasEfectivas().forEach(v => { const o = new Option(v, v); if (v === info.categoria) o.selected = true; selC.add(o); });
+    fila.appendChild(selC);
 
-    fila.appendChild(campos);
     lista.appendChild(fila);
 
-    // Aplicar dropdown custom a categoría
-    crearDropdown(selC, { colorDot: true });
+    const csU = crearDropdown(selU, {});
+    csU.classList.add('datos-cs-u');
+    const csC = crearDropdown(selC, { colorDot: true });
+    csC.classList.add('datos-cs-c');
 
-    // Guardar cambios al cambiar selects
     const guardar = () => propagarInfoProducto(inp.dataset.original, selU.value, selC.value);
     selU.addEventListener('change', guardar);
     selC.addEventListener('change', guardar);
@@ -1921,7 +1926,7 @@ const gestorOverlay = document.getElementById('gestor-overlay');
 
 function renderGestorPanel() {
   const cont = document.getElementById('gestor-contenido');
-  cont.innerHTML = '<p class="gestor-hint">Los predeterminados (en gris) no se pueden eliminar.</p>';
+  cont.innerHTML = '<p class="gestor-hint">Las predeterminadas (en gris) se pueden renombrar pero no eliminar.</p>';
 
   function renombrarEnConsumosYExtras(campo, viejo, nuevo) {
     datos.consumos.forEach(c => {
@@ -1978,16 +1983,24 @@ function renderGestorPanel() {
     return sec;
   }
 
-  const todasCats = [...new Set([...CATEGORIAS_LISTA_BASE, ...categoriasPropias()])];
-  cont.appendChild(hacerSeccion('Categorías', todasCats, c => CATEGORIAS_BASE_SET.has(c),
+  // Mapa de nombre-actual → clave-original para ítems base (considerando overrides)
+  const ovC = catOverrides();
+  const catBaseActualAOrig = {};
+  CATEGORIAS_LISTA_BASE.forEach(orig => { catBaseActualAOrig[ovC[orig] || orig] = orig; });
+  const catBaseActualSet = new Set(Object.keys(catBaseActualAOrig));
+
+  cont.appendChild(hacerSeccion('Categorías', categoriasEfectivas(), c => catBaseActualSet.has(c),
     (viejo, nuevo) => {
       renombrarEnConsumosYExtras('categoria', viejo, nuevo);
-      const propias = categoriasPropias();
-      if (propias.includes(viejo)) {
-        localStorage.setItem('despensa_categorias', JSON.stringify(propias.map(c => c === viejo ? nuevo : c)));
+      if (catBaseActualSet.has(viejo)) {
+        // Renombrar ítem base: guardar override
+        const ov = catOverrides();
+        const origKey = catBaseActualAOrig[viejo];
+        if (nuevo === origKey) delete ov[origKey]; else ov[origKey] = nuevo;
+        localStorage.setItem('despensa_cat_ov', JSON.stringify(ov));
       } else {
-        // base item: add renamed version as custom
-        localStorage.setItem('despensa_categorias', JSON.stringify([...propias, nuevo]));
+        const propias = categoriasPropias();
+        localStorage.setItem('despensa_categorias', JSON.stringify(propias.map(c => c === viejo ? nuevo : c)));
       }
       rebuildDropdownCategoria();
     },
@@ -1997,15 +2010,22 @@ function renderGestorPanel() {
     }
   ));
 
-  const todasUnids = [...new Set([...UNIDADES_LISTA_BASE, ...unidadesPropias()])];
-  cont.appendChild(hacerSeccion('Unidades', todasUnids, u => UNIDADES_BASE_SET.has(u),
+  const ovU = unidOverrides();
+  const unidBaseActualAOrig = {};
+  UNIDADES_LISTA_BASE.forEach(orig => { unidBaseActualAOrig[ovU[orig] || orig] = orig; });
+  const unidBaseActualSet = new Set(Object.keys(unidBaseActualAOrig));
+
+  cont.appendChild(hacerSeccion('Unidades', unidadesEfectivas(), u => unidBaseActualSet.has(u),
     (viejo, nuevo) => {
       renombrarEnConsumosYExtras('unidad', viejo, nuevo);
-      const propias = unidadesPropias();
-      if (propias.includes(viejo)) {
-        localStorage.setItem('despensa_unidades', JSON.stringify(propias.map(u => u === viejo ? nuevo : u)));
+      if (unidBaseActualSet.has(viejo)) {
+        const ov = unidOverrides();
+        const origKey = unidBaseActualAOrig[viejo];
+        if (nuevo === origKey) delete ov[origKey]; else ov[origKey] = nuevo;
+        localStorage.setItem('despensa_unid_ov', JSON.stringify(ov));
       } else {
-        localStorage.setItem('despensa_unidades', JSON.stringify([...propias, nuevo]));
+        const propias = unidadesPropias();
+        localStorage.setItem('despensa_unidades', JSON.stringify(propias.map(u => u === viejo ? nuevo : u)));
       }
       rebuildDropdownUnidad();
     },
