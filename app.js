@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.41';
+const APP_VERSION = '0.42';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -904,8 +904,13 @@ function listaPendiente() {
 // El "carrito" (productos que ya pusiste en el changuito) se guarda para no perderlo.
 const seleccionados = new Set(datos.carrito);
 const listaCantidades = new Map();
-let listaExtras = []; // ítems agregados manualmente (no vienen de consumos ni stock)
+try { JSON.parse(localStorage.getItem('despensa_lista_cant') || '[]').forEach(([k, v]) => listaCantidades.set(k, v)); } catch {}
+let listaExtras = [];
+try { listaExtras = JSON.parse(localStorage.getItem('despensa_lista_extras') || '[]'); } catch {}
 const listaIgnorados = new Set(); // ignorados temporalmente hasta la próxima compra
+
+function guardarExtrasLocal() { try { localStorage.setItem('despensa_lista_extras', JSON.stringify(listaExtras)); } catch {} }
+function guardarCantidadesLocal() { try { localStorage.setItem('despensa_lista_cant', JSON.stringify([...listaCantidades])); } catch {} }
 
 function guardarCarrito() {
   if (enCasa()) { nubeSetCarrito([...seleccionados]); return; }
@@ -960,6 +965,7 @@ function renderLista() {
     const cur = listaCantidades.get(prod) || 1;
     const nuevo = Math.max(1, Math.round((cur + dir) * 100) / 100);
     listaCantidades.set(prod, nuevo);
+    guardarCantidadesLocal();
     btn.closest('.li-cant').querySelector('.li-num').textContent = fmtCant(nuevo);
   }));
   ul.querySelectorAll('input[type=checkbox]').forEach(chk => chk.addEventListener('change', () => {
@@ -985,6 +991,7 @@ function renderLista() {
         propagarInfoProducto(prod, unidad, categoria);
         if (extra && prod !== nombre) {
           listaExtras = listaExtras.map(e => e.producto === prod ? { ...e, producto: nombre } : e);
+          guardarExtrasLocal();
         }
         renderLista();
       },
@@ -993,6 +1000,7 @@ function renderLista() {
         listaIgnorados.add(prod);
         seleccionados.delete(prod);
         listaCantidades.delete(prod);
+        guardarExtrasLocal(); guardarCantidadesLocal();
         renderLista();
       }
     );
@@ -1044,7 +1052,9 @@ function ejecutarConfirmarCompra(aComprar, cantidades) {
   seleccionados.clear();
   listaExtras = listaExtras.filter(e => !aComprar.has(e.producto));
   listaIgnorados.clear();
+  aComprar.forEach(p => listaCantidades.delete(p));
   datos.carrito = [];
+  guardarExtrasLocal(); guardarCantidadesLocal();
   guardarDatos();
   toast('Compra confirmada');
   refrescarTodo();
@@ -1205,6 +1215,7 @@ addTap(document.getElementById('btn-agregar-lista'), () => {
       toast(`${nombre} ya está en la lista`); return;
     }
     listaExtras.push({ producto: nombre, unidad, categoria, cantidad: 1, stockBajo: false });
+    guardarExtrasLocal();
     propagarInfoProducto(nombre, unidad, categoria);
     renderLista();
   });
@@ -1852,8 +1863,21 @@ function rebuildDropdownCategoria() {
 }
 
 function rebuildDropdownUnidad() {
+  const efectivas = unidadesEfectivas();
   while (inputUnidad.options.length) inputUnidad.remove(0);
-  unidadesEfectivas().forEach(v => inputUnidad.add(new Option(v === 'paquete' ? 'paq.' : v, v)));
+  efectivas.forEach(v => inputUnidad.add(new Option(v === 'paquete' ? 'paq.' : v, v)));
+  // Rebuild chips
+  const chipsEl = document.getElementById('unidad-chips');
+  const addBtn = document.getElementById('chip-add-unidad');
+  chipsEl.querySelectorAll('.u-chip:not(.u-chip-add)').forEach(c => c.remove());
+  efectivas.forEach(v => {
+    const chip = document.createElement('button');
+    chip.type = 'button'; chip.className = 'u-chip'; chip.dataset.val = v;
+    chip.textContent = v === 'paquete' ? 'paq.' : v;
+    addTap(chip, () => { inputUnidad.value = v; sincronizarChips(v); });
+    chipsEl.insertBefore(chip, addBtn);
+  });
+  sincronizarChips(inputUnidad.value);
 }
 
 const datosOverlay = document.getElementById('datos-overlay');
@@ -1989,11 +2013,13 @@ function renderGestorPanel() {
   CATEGORIAS_LISTA_BASE.forEach(orig => { catBaseActualAOrig[ovC[orig] || orig] = orig; });
   const catBaseActualSet = new Set(Object.keys(catBaseActualAOrig));
 
-  cont.appendChild(hacerSeccion('Categorías', categoriasEfectivas(), c => catBaseActualSet.has(c),
+  const columnas = document.createElement('div');
+  columnas.className = 'gestor-columnas';
+
+  columnas.appendChild(hacerSeccion('Categorías', categoriasEfectivas(), c => catBaseActualSet.has(c),
     (viejo, nuevo) => {
       renombrarEnConsumosYExtras('categoria', viejo, nuevo);
       if (catBaseActualSet.has(viejo)) {
-        // Renombrar ítem base: guardar override
         const ov = catOverrides();
         const origKey = catBaseActualAOrig[viejo];
         if (nuevo === origKey) delete ov[origKey]; else ov[origKey] = nuevo;
@@ -2015,7 +2041,7 @@ function renderGestorPanel() {
   UNIDADES_LISTA_BASE.forEach(orig => { unidBaseActualAOrig[ovU[orig] || orig] = orig; });
   const unidBaseActualSet = new Set(Object.keys(unidBaseActualAOrig));
 
-  cont.appendChild(hacerSeccion('Unidades', unidadesEfectivas(), u => unidBaseActualSet.has(u),
+  columnas.appendChild(hacerSeccion('Unidades', unidadesEfectivas(), u => unidBaseActualSet.has(u),
     (viejo, nuevo) => {
       renombrarEnConsumosYExtras('unidad', viejo, nuevo);
       if (unidBaseActualSet.has(viejo)) {
@@ -2034,6 +2060,8 @@ function renderGestorPanel() {
       rebuildDropdownUnidad();
     }
   ));
+
+  cont.appendChild(columnas);
 }
 
 addTap(document.getElementById('btn-gestor-uc'), () => { renderGestorPanel(); gestorOverlay.style.display = 'flex'; });

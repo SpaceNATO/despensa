@@ -494,11 +494,12 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
 /* ===== Gestionar unidades y categorías ===== */
 .gestor-hint { font-size: 12px; color: var(--gris-osc); margin-bottom: 12px; }
-.gestor-seccion { margin-bottom: 20px; }
+.gestor-columnas { display: flex; gap: 12px; align-items: flex-start; }
+.gestor-seccion { flex: 1; min-width: 0; }
 .gestor-seccion h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gris-osc); margin-bottom: 8px; }
-.gestor-fila { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--borde); }
+.gestor-fila { display: flex; align-items: center; gap: 4px; padding: 7px 0; border-bottom: 1px solid var(--borde); }
 .gestor-fila:last-child { border-bottom: none; }
-.gestor-nombre { flex: 1; font-size: 14px; }
+.gestor-nombre { flex: 1; min-width: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gestor-base { opacity: .5; }
 
 .iconbtn {
