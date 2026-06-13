@@ -510,7 +510,7 @@ function unidadesEfectivas() {
 }
 
 // Inyectar las guardadas en el <select> antes de armar el dropdown
-categoriasEfectivas().forEach(nombre => {
+categoriasPropias().forEach(nombre => {
   if (![...inputCategoria.options].some(o => o.value === nombre)) inputCategoria.add(new Option(nombre, nombre));
 });
 
