@@ -189,19 +189,21 @@ h3 { font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 700; color: 
 .subcard-cantidad { width: 148px; flex: none; }
 .subcard-unidad { flex: 1; min-width: 0; padding-bottom: 8px; }
 .subcard-categoria { width: 100%; margin-top: 12px; }
-.cant-ctrl { display: flex; align-items: center; gap: 4px; }
-.cant-ctrl .step {
-  flex: none; width: 36px; height: 36px; border-radius: 10px;
+.cant-ctrl { display: flex; flex-direction: column; gap: 6px; }
+.cant-steps { display: flex; gap: 8px; }
+.cant-steps .step {
+  flex: 1; height: 36px; border-radius: 10px;
   background: var(--gris); border: none; color: var(--texto);
   font-size: 22px; line-height: 1; cursor: pointer;
 }
-.cant-ctrl .step:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.cant-steps .step:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .cant-num {
-  flex: 1; text-align: center; font-size: 26px; font-weight: 800;
+  width: 100%; text-align: center; font-size: 30px; font-weight: 800;
   font-family: 'Sora', sans-serif; font-variant-numeric: tabular-nums;
-  color: var(--texto); cursor: pointer; user-select: none;
-  line-height: 1; padding: 2px 0;
+  color: var(--texto); background: none; border: none; cursor: pointer;
+  user-select: none; padding: 4px 0; line-height: 1; border-radius: 8px;
 }
+.cant-num:active { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 
 /* Chips de unidad */
 .unidad-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
@@ -839,6 +841,50 @@ canvas { margin: 12px 0; max-height: 320px; }
 
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pop { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
+
+/* ===== Teclado QWERTY propio ===== */
+.qwerty-sheet {
+  width: 100%; max-width: 600px; margin: 0 auto;
+  background: var(--bg-elev); border-radius: 22px 22px 0 0;
+  padding: 14px 8px 28px;
+  animation: sheetUp .22s ease;
+}
+.qwerty-display-row {
+  background: var(--bg); border-radius: 12px;
+  padding: 10px 14px; margin-bottom: 10px; min-height: 44px;
+  display: flex; align-items: center;
+}
+.qwerty-val {
+  flex: 1; font-size: 16px; font-family: 'Nunito', sans-serif;
+  font-weight: 600; color: var(--texto); word-break: break-all;
+}
+.qwerty-val::after {
+  content: '|'; color: var(--accent);
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+.qwerty-sugs {
+  display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px;
+  scrollbar-width: none; min-height: 0;
+}
+.qwerty-sugs::-webkit-scrollbar { display: none; }
+.qwerty-sug {
+  background: var(--card); border: .5px solid var(--borde); border-radius: 20px;
+  padding: 5px 14px; font-size: 13px; font-weight: 600;
+  color: var(--texto); white-space: nowrap; cursor: pointer; flex: none;
+}
+.qwerty-grid { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.qk-row { display: flex; justify-content: center; gap: 5px; }
+.qk {
+  height: 46px; flex: 1; max-width: 38px;
+  border-radius: 9px; background: var(--card); border: .5px solid var(--borde);
+  font-size: 17px; font-weight: 500; font-family: 'Nunito', sans-serif;
+  color: var(--texto); cursor: pointer;
+}
+.qk:active { background: var(--gris); }
+.qk-special { background: var(--gris); font-size: 13px; max-width: 54px; font-weight: 700; }
+.qk-space { max-width: 200px; flex: 5; }
+.qk-shift-on { background: color-mix(in srgb, var(--accent) 20%, transparent) !important; color: var(--accent); }
 
 /* ===== Teclado numérico propio ===== */
 .numpad-overlay {

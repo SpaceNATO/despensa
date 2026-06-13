@@ -1818,5 +1818,132 @@ document.getElementById('numpad-overlay').addEventListener('click', (e) => {
   if (e.target === document.getElementById('numpad-overlay')) cerrarNumpad();
 });
 
-// Tocar el número de cantidad abre el numpad (no hay input visible = no hay teclado nativo)
+// Tocar el número de cantidad abre el numpad
 cantNumSpan.addEventListener('click', () => abrirNumpad(inputCantidad));
+cantNumSpan.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  abrirNumpad(inputCantidad);
+}, { passive: false });
+
+// ===== Teclado QWERTY propio =====
+let qwertyValor = '';
+let qwertyShift = true; // empieza en mayúscula
+let qwertyCaps = false;
+let qwertyMode = 'alpha';
+let qwertyTarget = null;
+
+const KB_ALPHA = [
+  ['q','w','e','r','t','y','u','i','o','p'],
+  ['a','s','d','f','g','h','j','k','l','ñ'],
+  ['SHIFT','z','x','c','v','b','n','m','BACK'],
+  ['123',' ']
+];
+const KB_NUM = [
+  ['1','2','3','4','5','6','7','8','9','0'],
+  ['-','/',':',';','(',')','$','&','"','\''],
+  ['.', ',', '@', '#', '!', '?', '+', '_', 'BACK'],
+  ['ABC',' ']
+];
+
+function abrirQwerty(inputEl) {
+  qwertyTarget = inputEl;
+  qwertyValor = inputEl.value || '';
+  qwertyShift = qwertyValor.length === 0;
+  qwertyCaps = false;
+  qwertyMode = 'alpha';
+  _qActualizarDisplay();
+  _qBuildGrid();
+  _qActualizarSugs();
+  document.getElementById('qwerty-overlay').style.display = 'flex';
+}
+function cerrarQwerty() {
+  document.getElementById('qwerty-overlay').style.display = 'none';
+  qwertyTarget = null;
+}
+function _qActualizarDisplay() {
+  document.getElementById('qwerty-val').textContent = qwertyValor;
+  if (qwertyTarget) qwertyTarget.value = qwertyValor;
+}
+function _qActualizarSugs() {
+  const cont = document.getElementById('qwerty-sugs');
+  const texto = normaliza(qwertyValor.trim());
+  if (!texto) { cont.innerHTML = ''; return; }
+  const sugs = nombresConocidos()
+    .filter(n => { const nn = normaliza(n); return nn.startsWith(texto) && nn !== texto; })
+    .slice(0, 10);
+  cont.innerHTML = sugs.map(s => `<button class="qwerty-sug">${escapeHtml(s)}</button>`).join('');
+  cont.querySelectorAll('.qwerty-sug').forEach(btn => btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    qwertyValor = btn.textContent;
+    _qActualizarDisplay();
+    if (qwertyTarget) qwertyTarget.dispatchEvent(new Event('input', { bubbles: true }));
+    cerrarQwerty();
+  }));
+}
+function _qHandleKey(k) {
+  if (k === 'BACK') {
+    qwertyValor = qwertyValor.slice(0, -1);
+  } else if (k === 'SHIFT') {
+    if (qwertyCaps) { qwertyCaps = false; qwertyShift = false; }
+    else if (qwertyShift) { qwertyCaps = true; }
+    else { qwertyShift = true; }
+    _qBuildGrid(); return;
+  } else if (k === '123') {
+    qwertyMode = 'num'; _qBuildGrid(); return;
+  } else if (k === 'ABC') {
+    qwertyMode = 'alpha'; _qBuildGrid(); return;
+  } else if (k === ' ') {
+    qwertyValor += ' ';
+  } else {
+    const up = qwertyShift || qwertyCaps;
+    qwertyValor += up ? k.toUpperCase() : k;
+    if (qwertyShift && !qwertyCaps) { qwertyShift = false; _qBuildGrid(); }
+  }
+  _qActualizarDisplay();
+  _qActualizarSugs();
+}
+function _qBuildGrid() {
+  const grid = document.getElementById('qwerty-grid');
+  const rows = qwertyMode === 'num' ? KB_NUM : KB_ALPHA;
+  const up = qwertyShift || qwertyCaps;
+  grid.innerHTML = rows.map(row => `<div class="qk-row">${row.map(k => {
+    let lbl = k, cls = 'qk', dat = k;
+    if (k === 'SHIFT') {
+      lbl = qwertyCaps ? '⇪' : '⇧';
+      cls += ' qk-special' + (up ? ' qk-shift-on' : '');
+    } else if (k === 'BACK') { lbl = '⌫'; cls += ' qk-special'; }
+    else if (k === '123') { cls += ' qk-special'; }
+    else if (k === 'ABC') { cls += ' qk-special'; }
+    else if (k === ' ') { lbl = ''; cls += ' qk-space'; }
+    else { lbl = up ? k.toUpperCase() : k; }
+    return `<button class="${cls}" data-qk="${escapeHtml(dat)}">${escapeHtml(lbl)}</button>`;
+  }).join('')}</div>`).join('');
+  grid.querySelectorAll('[data-qk]').forEach(btn => btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    _qHandleKey(btn.dataset.qk);
+  }));
+}
+
+document.getElementById('qwerty-cancelar').addEventListener('click', cerrarQwerty);
+document.getElementById('qwerty-ok').addEventListener('click', () => {
+  if (qwertyTarget) qwertyTarget.dispatchEvent(new Event('input', { bubbles: true }));
+  cerrarQwerty();
+});
+document.getElementById('qwerty-overlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('qwerty-overlay')) cerrarQwerty();
+});
+
+// Interceptar el campo Producto en dispositivos táctiles
+if (isTouchDevice) {
+  inputProducto.setAttribute('readonly', '');
+  inputProducto.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    abrirQwerty(inputProducto);
+  }, { passive: false });
+  // También el botón de lupa/campo producto
+  document.querySelector('.card-producto').addEventListener('click', (e) => {
+    if (!document.getElementById('qwerty-overlay').style.display || document.getElementById('qwerty-overlay').style.display === 'none') {
+      abrirQwerty(inputProducto);
+    }
+  });
+}

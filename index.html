@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=21" />
+  <link rel="stylesheet" href="styles.css?v=22" />
 </head>
 <body>
   <header>
@@ -42,9 +42,11 @@
           <div class="subcard subcard-cantidad">
             <label>Cantidad</label>
             <div class="cant-ctrl">
-              <button type="button" class="step" id="cant-menos" aria-label="Menos">−</button>
-              <span class="cant-num" id="cant-num" role="button" aria-label="Cambiar cantidad">1</span>
-              <button type="button" class="step" id="cant-mas" aria-label="Más">+</button>
+              <div class="cant-steps">
+                <button type="button" class="step" id="cant-menos" aria-label="Menos">−</button>
+                <button type="button" class="step" id="cant-mas" aria-label="Más">+</button>
+              </div>
+              <button type="button" class="cant-num" id="cant-num" aria-label="Cambiar cantidad">1</button>
             </div>
             <input id="cantidad" name="cantidad" type="hidden" value="1" />
           </div>
@@ -238,7 +240,22 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
-  <script src="app.js?v=21"></script>
+  <script src="app.js?v=22"></script>
+
+  <!-- Teclado QWERTY propio (desliza desde abajo) -->
+  <div id="qwerty-overlay" class="numpad-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Teclado">
+    <div class="qwerty-sheet">
+      <div class="qwerty-display-row">
+        <span class="qwerty-val" id="qwerty-val"></span>
+      </div>
+      <div id="qwerty-sugs" class="qwerty-sugs"></div>
+      <div id="qwerty-grid" class="qwerty-grid"></div>
+      <div class="numpad-footer">
+        <button class="nk-cancel" id="qwerty-cancelar">Cancelar</button>
+        <button class="btn-primary nk-ok" id="qwerty-ok">Listo</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Teclado numérico propio (desliza desde abajo) -->
   <div id="numpad-overlay" class="numpad-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Ingresar cantidad">
