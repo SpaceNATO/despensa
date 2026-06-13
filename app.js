@@ -849,7 +849,7 @@ function renderStock() {
     });
     if (isTouchDevice) {
       inp.setAttribute('readonly', '');
-      inp.addEventListener('touchend', (e) => { e.preventDefault(); abrirNumpad(inp); }, { passive: false });
+      inp.addEventListener('touchstart', (e) => { e.preventDefault(); abrirNumpad(inp); }, { passive: false });
     }
   });
 }
@@ -1785,29 +1785,35 @@ function cerrarNumpad() {
   numpadTarget = null;
 }
 
+// touchstart+click: touchstart en mobile es más confiable que click/touchend en overlays
+function addTap(el, fn) {
+  el.addEventListener('touchstart', (e) => { e.preventDefault(); fn(); }, { passive: false });
+  el.addEventListener('click', fn);
+}
+
+function numpadPresionarTecla(k) {
+  if (k === '⌫') {
+    numpadValor = numpadValor.slice(0, -1);
+  } else if (k === '.') {
+    if (!numpadValor.includes('.')) numpadValor += '.';
+  } else {
+    if (numpadValor === '0' || numpadValor === '') numpadValor = k;
+    else numpadValor += k;
+  }
+  const display = numpadValor || '0';
+  document.getElementById('numpad-display').textContent = display;
+  if (numpadTarget) {
+    numpadTarget.value = numpadValor;
+    if (numpadTarget === inputCantidad) cantNumSpan.textContent = display;
+  }
+}
+
 document.querySelectorAll('.nk[data-k]').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const k = btn.dataset.k;
-    if (k === '⌫') {
-      numpadValor = numpadValor.slice(0, -1);
-    } else if (k === '.') {
-      if (!numpadValor.includes('.')) numpadValor += '.';
-    } else {
-      if (numpadValor === '0' || numpadValor === '') numpadValor = k;
-      else numpadValor += k;
-    }
-    const display = numpadValor || '0';
-    document.getElementById('numpad-display').textContent = display;
-    if (numpadTarget) {
-      numpadTarget.value = numpadValor;
-      if (numpadTarget === inputCantidad) cantNumSpan.textContent = display;
-    }
-  });
+  addTap(btn, () => numpadPresionarTecla(btn.dataset.k));
 });
 
-document.getElementById('numpad-cancel').addEventListener('click', () => cerrarNumpad());
-document.getElementById('numpad-ok').addEventListener('click', () => {
+addTap(document.getElementById('numpad-cancel'), () => cerrarNumpad());
+addTap(document.getElementById('numpad-ok'), () => {
   if (numpadTarget) {
     const v = numpadValor !== '' ? numpadValor : '0';
     numpadTarget.value = v;
@@ -1820,9 +1826,8 @@ document.getElementById('numpad-overlay').addEventListener('click', (e) => {
   if (e.target === document.getElementById('numpad-overlay') && Date.now() - _numpadOpenAt > 350) cerrarNumpad();
 });
 
-// Tocar el número de cantidad abre el numpad (ambos eventos para touch + desktop)
-cantNumSpan.addEventListener('touchend', (e) => { e.preventDefault(); abrirNumpad(inputCantidad); }, { passive: false });
-cantNumSpan.addEventListener('click', () => abrirNumpad(inputCantidad));
+// Tocar el número de cantidad abre el numpad
+addTap(cantNumSpan, () => abrirNumpad(inputCantidad));
 
 // ===== Teclado QWERTY propio =====
 let qwertyValor = '';
