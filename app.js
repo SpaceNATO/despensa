@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.39';
+const APP_VERSION = '0.40';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -1849,22 +1849,67 @@ function renderDatosPanel() {
   const prods = todosProductosConocidos();
   const todas_u = [...new Set([...UNIDADES_LISTA_BASE, ...unidadesPropias()])];
   const todas_c = [...new Set([...CATEGORIAS_LISTA_BASE, ...categoriasPropias()])];
+  lista.innerHTML = '';
   if (!prods.length) { lista.innerHTML = '<p class="datos-vacio">No hay productos cargados aún.</p>'; return; }
-  lista.innerHTML = prods.map(([nombre, info]) => `
-    <div class="datos-fila">
-      <span class="datos-nombre">${escapeHtml(nombre)}</span>
-      <select class="datos-select" data-prod="${escapeHtml(nombre)}" data-campo="unidad">
-        ${todas_u.map(v => `<option value="${escapeHtml(v)}"${info.unidad === v ? ' selected' : ''}>${escapeHtml(v)}</option>`).join('')}
-      </select>
-      <select class="datos-select" data-prod="${escapeHtml(nombre)}" data-campo="categoria">
-        ${todas_c.map(v => `<option value="${escapeHtml(v)}"${info.categoria === v ? ' selected' : ''}>${escapeHtml(v)}</option>`).join('')}
-      </select>
-    </div>`).join('');
-  lista.querySelectorAll('.datos-select').forEach(sel => sel.addEventListener('change', () => {
-    const prod = sel.dataset.prod;
-    const fila = sel.closest('.datos-fila');
-    propagarInfoProducto(prod, fila.querySelector('[data-campo="unidad"]').value, fila.querySelector('[data-campo="categoria"]').value);
-  }));
+
+  prods.forEach(([nombre, info]) => {
+    const fila = document.createElement('div');
+    fila.className = 'datos-fila';
+
+    // Nombre editable
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'datos-nombre-input';
+    inp.value = nombre; inp.dataset.original = nombre;
+    inp.addEventListener('blur', () => {
+      const nuevo = inp.value.trim();
+      if (!nuevo || nuevo === inp.dataset.original) { inp.value = inp.dataset.original; return; }
+      renombrarProducto(inp.dataset.original, nuevo);
+      inp.dataset.original = nuevo;
+    });
+    fila.appendChild(inp);
+
+    const campos = document.createElement('div');
+    campos.className = 'datos-campos';
+
+    // Select de unidad (nativo, pequeño)
+    const selU = document.createElement('select');
+    selU.className = 'datos-select-u';
+    todas_u.forEach(v => { const o = new Option(v, v); if (v === info.unidad) o.selected = true; selU.add(o); });
+    campos.appendChild(selU);
+
+    // Select de categoría → custom dropdown
+    const selC = document.createElement('select');
+    todas_c.forEach(v => { const o = new Option(v, v); if (v === info.categoria) o.selected = true; selC.add(o); });
+    campos.appendChild(selC);
+
+    fila.appendChild(campos);
+    lista.appendChild(fila);
+
+    // Aplicar dropdown custom a categoría
+    crearDropdown(selC, { colorDot: true });
+
+    // Guardar cambios al cambiar selects
+    const guardar = () => propagarInfoProducto(inp.dataset.original, selU.value, selC.value);
+    selU.addEventListener('change', guardar);
+    selC.addEventListener('change', guardar);
+  });
+}
+
+function renombrarProducto(viejo, nuevo) {
+  datos.consumos.forEach(c => {
+    if (c.producto === viejo) { if (enCasa()) nubeEditarConsumo(c.id, { producto: nuevo }); c.producto = nuevo; }
+  });
+  if (datos.stock[viejo]) { datos.stock[nuevo] = datos.stock[viejo]; delete datos.stock[viejo]; }
+  listaExtras.forEach(e => { if (e.producto === viejo) e.producto = nuevo; });
+  if (seleccionados.has(viejo)) { seleccionados.delete(viejo); seleccionados.add(nuevo); }
+  if (listaCantidades.has(viejo)) { listaCantidades.set(nuevo, listaCantidades.get(viejo)); listaCantidades.delete(viejo); }
+  try {
+    const db = JSON.parse(localStorage.getItem('despensa_items_extra') || '{}');
+    if (db[viejo]) { db[nuevo] = db[viejo]; delete db[viejo]; }
+    localStorage.setItem('despensa_items_extra', JSON.stringify(db));
+  } catch {}
+  if (!enCasa()) guardarDatos();
+  listaItemPersistirInfo(nuevo, datos.stock[nuevo] ? (catalogo()[nuevo] || { unidad: 'u' }).unidad : 'u', (catalogo()[nuevo] || { categoria: 'Otros' }).categoria);
 }
 
 addTap(document.getElementById('btn-datos-cargados'), () => { renderDatosPanel(); datosOverlay.style.display = 'flex'; });
@@ -1876,38 +1921,7 @@ const gestorOverlay = document.getElementById('gestor-overlay');
 
 function renderGestorPanel() {
   const cont = document.getElementById('gestor-contenido');
-  cont.innerHTML = '';
-
-  function hacerSeccion(titulo, todosItems, esBase, onRenombrar, onEliminar) {
-    const sec = document.createElement('div');
-    sec.className = 'gestor-seccion';
-    sec.innerHTML = `<h4>${titulo}</h4>`;
-    todosItems.forEach(nombre => {
-      const fila = document.createElement('div');
-      fila.className = 'gestor-fila';
-      const span = document.createElement('span');
-      span.className = 'gestor-nombre' + (esBase(nombre) ? ' gestor-base' : '');
-      span.textContent = nombre;
-      fila.appendChild(span);
-      if (!esBase(nombre)) {
-        const btnRen = document.createElement('button');
-        btnRen.className = 'iconbtn'; btnRen.title = 'Renombrar';
-        btnRen.innerHTML = icono('lapiz');
-        addTap(btnRen, () => abrirPrompt(`Renombrar "${nombre}":`, nombre, nuevo => {
-          nuevo = nuevo.trim();
-          if (!nuevo || nuevo === nombre) return;
-          onRenombrar(nombre, nuevo); renderGestorPanel();
-        }));
-        const btnDel = document.createElement('button');
-        btnDel.className = 'iconbtn borrar'; btnDel.title = 'Eliminar';
-        btnDel.textContent = '✕';
-        addTap(btnDel, () => abrirConfirm(`¿Eliminar "${nombre}"?`, () => { onEliminar(nombre); renderGestorPanel(); }));
-        fila.appendChild(btnRen); fila.appendChild(btnDel);
-      }
-      sec.appendChild(fila);
-    });
-    return sec;
-  }
+  cont.innerHTML = '<p class="gestor-hint">Los predeterminados (en gris) no se pueden eliminar.</p>';
 
   function renombrarEnConsumosYExtras(campo, viejo, nuevo) {
     datos.consumos.forEach(c => {
@@ -1922,11 +1936,59 @@ function renderGestorPanel() {
     } catch {}
   }
 
+  function hacerSeccion(titulo, todosItems, esBase, onRenombrar, onEliminar) {
+    const sec = document.createElement('div');
+    sec.className = 'gestor-seccion';
+    sec.innerHTML = `<h4>${titulo}</h4>`;
+    todosItems.forEach(nombre => {
+      const fila = document.createElement('div');
+      fila.className = 'gestor-fila';
+      const span = document.createElement('span');
+      span.className = 'gestor-nombre' + (esBase(nombre) ? ' gestor-base' : '');
+      span.textContent = nombre;
+      fila.appendChild(span);
+
+      // Pencil para todos (rename)
+      const btnRen = document.createElement('button');
+      btnRen.className = 'iconbtn'; btnRen.title = 'Renombrar';
+      btnRen.innerHTML = icono('lapiz');
+      btnRen.addEventListener('click', () => abrirPrompt(`Renombrar "${nombre}":`, nombre, nuevo => {
+        nuevo = nuevo.trim();
+        if (!nuevo || nuevo === nombre) return;
+        onRenombrar(nombre, nuevo);
+        renderGestorPanel();
+        refrescarTodo();
+      }));
+      fila.appendChild(btnRen);
+
+      // Delete solo para custom
+      if (!esBase(nombre)) {
+        const btnDel = document.createElement('button');
+        btnDel.className = 'iconbtn borrar'; btnDel.title = 'Eliminar';
+        btnDel.textContent = '✕';
+        btnDel.addEventListener('click', () => abrirConfirm(`¿Eliminar "${nombre}"?`, () => {
+          onEliminar(nombre);
+          renderGestorPanel();
+          refrescarTodo();
+        }));
+        fila.appendChild(btnDel);
+      }
+      sec.appendChild(fila);
+    });
+    return sec;
+  }
+
   const todasCats = [...new Set([...CATEGORIAS_LISTA_BASE, ...categoriasPropias()])];
   cont.appendChild(hacerSeccion('Categorías', todasCats, c => CATEGORIAS_BASE_SET.has(c),
     (viejo, nuevo) => {
       renombrarEnConsumosYExtras('categoria', viejo, nuevo);
-      localStorage.setItem('despensa_categorias', JSON.stringify(categoriasPropias().map(c => c === viejo ? nuevo : c)));
+      const propias = categoriasPropias();
+      if (propias.includes(viejo)) {
+        localStorage.setItem('despensa_categorias', JSON.stringify(propias.map(c => c === viejo ? nuevo : c)));
+      } else {
+        // base item: add renamed version as custom
+        localStorage.setItem('despensa_categorias', JSON.stringify([...propias, nuevo]));
+      }
       rebuildDropdownCategoria();
     },
     nombre => {
@@ -1939,7 +2001,12 @@ function renderGestorPanel() {
   cont.appendChild(hacerSeccion('Unidades', todasUnids, u => UNIDADES_BASE_SET.has(u),
     (viejo, nuevo) => {
       renombrarEnConsumosYExtras('unidad', viejo, nuevo);
-      localStorage.setItem('despensa_unidades', JSON.stringify(unidadesPropias().map(u => u === viejo ? nuevo : u)));
+      const propias = unidadesPropias();
+      if (propias.includes(viejo)) {
+        localStorage.setItem('despensa_unidades', JSON.stringify(propias.map(u => u === viejo ? nuevo : u)));
+      } else {
+        localStorage.setItem('despensa_unidades', JSON.stringify([...propias, nuevo]));
+      }
       rebuildDropdownUnidad();
     },
     nombre => {

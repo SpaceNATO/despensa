@@ -480,19 +480,25 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
 /* ===== Datos cargados ===== */
 .datos-vacio { color: var(--gris-osc); text-align: center; padding: 24px 0; font-size: 14px; }
-.datos-fila { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--borde); }
+.datos-fila { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-bottom: 1px solid var(--borde); }
 .datos-fila:last-child { border-bottom: none; }
-.datos-nombre { flex: 1; font-size: 14px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.datos-select { font-size: 12px; padding: 5px 6px; border-radius: 8px; border: 1.5px solid var(--borde); background: var(--bg-elev); color: var(--texto); font-family: 'Nunito', inherit; flex: none; }
-.datos-select:focus { outline: none; border-color: var(--accent); }
+.datos-nombre-input { font-size: 14px; font-weight: 600; border: none; background: none; color: var(--texto); width: 100%; padding: 2px 0; font-family: 'Nunito', inherit; }
+.datos-nombre-input:focus { outline: none; border-bottom: 1.5px solid var(--accent); }
+.datos-campos { display: flex; gap: 8px; align-items: center; }
+.datos-select-u { font-size: 12px; padding: 5px 6px; border-radius: 8px; border: 1.5px solid var(--borde); background: var(--bg-elev); color: var(--texto); font-family: 'Nunito', inherit; width: 70px; flex: none; }
+.datos-select-u:focus { outline: none; border-color: var(--accent); }
+.datos-campos .cs { flex: 1; min-width: 0; }
+.datos-campos .cs-trigger { padding: 5px 8px; border-radius: 8px; border: 1.5px solid var(--borde); font-size: 12px; }
+.datos-campos .cs.abierto .cs-trigger { border-color: var(--accent); }
 
 /* ===== Gestionar unidades y categorías ===== */
+.gestor-hint { font-size: 12px; color: var(--gris-osc); margin-bottom: 12px; }
 .gestor-seccion { margin-bottom: 20px; }
 .gestor-seccion h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gris-osc); margin-bottom: 8px; }
 .gestor-fila { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--borde); }
 .gestor-fila:last-child { border-bottom: none; }
 .gestor-nombre { flex: 1; font-size: 14px; }
-.gestor-base { opacity: .45; font-style: italic; }
+.gestor-base { opacity: .5; }
 
 .iconbtn {
   background: none; border: none; cursor: pointer;
