@@ -2,6 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
+const APP_VERSION = 'v30';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -1594,6 +1595,7 @@ function renderSwatches(contId, lista, actual, onPick) {
 }
 
 function renderAjustes() {
+  document.getElementById('ajustes-version').textContent = 'Mi Despensa ' + APP_VERSION;
   renderSwatches('set-principal', COLORES, colorActual(), (c) => {
     const preset = COLORES.find(x => x.c === c);
     aplicarColor(c, preset ? preset.o : undefined);
