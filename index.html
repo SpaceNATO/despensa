@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=35" />
+  <link rel="stylesheet" href="styles.css?v=36" />
 </head>
 <body>
   <header>
@@ -241,6 +241,48 @@
     </div>
   </div>
 
+  <!-- Modal para agregar/editar ítems de la lista de compras -->
+  <div id="lista-item-overlay" class="modal-overlay lista-item-overlay" style="display:none">
+    <div class="modal" role="dialog" aria-modal="true">
+      <p id="lista-item-titulo">Agregar ítem</p>
+      <div class="lista-item-form">
+        <input id="lista-item-nombre" type="text" class="modal-prompt-input" placeholder="Nombre del producto" autocomplete="off" style="display:block;margin:0" />
+        <div class="lista-item-row">
+          <div class="lista-item-campo">
+            <label>Unidad</label>
+            <select id="lista-item-unidad">
+              <option value="u">u</option>
+              <option value="L">L</option>
+              <option value="kg">kg</option>
+              <option value="g">g</option>
+              <option value="ml">ml</option>
+              <option value="rollo">rollo</option>
+              <option value="paquete">paquete</option>
+            </select>
+          </div>
+          <div class="lista-item-campo lista-item-campo-cat">
+            <label>Categoría</label>
+            <select id="lista-item-categoria">
+              <option value="Almacén">Almacén</option>
+              <option value="Lácteos">Lácteos</option>
+              <option value="Frutas y verduras">Frutas y verduras</option>
+              <option value="Carnes">Carnes</option>
+              <option value="Limpieza">Limpieza</option>
+              <option value="Higiene">Higiene</option>
+              <option value="Bebidas">Bebidas</option>
+              <option value="Otros">Otros</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-botones">
+        <button id="lista-item-cancelar" class="btn-secundario">Cancelar</button>
+        <button id="lista-item-eliminar" class="btn-secundario lista-item-btn-del" style="display:none">Eliminar</button>
+        <button id="lista-item-guardar" class="btn-primary">Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Firebase (compartir entre celulares) + generador de QR -->
@@ -248,7 +290,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
-  <script src="app.js?v=35"></script>
+  <script src="app.js?v=36"></script>
 
   <!-- Teclado QWERTY propio (desliza desde abajo) -->
   <div id="qwerty-overlay" class="numpad-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Teclado">

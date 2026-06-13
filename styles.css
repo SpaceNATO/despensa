@@ -733,6 +733,20 @@ canvas { margin: 12px 0; max-height: 320px; }
 }
 .modal-prompt-input:focus { outline: none; border-color: var(--accent); }
 
+/* Modal lista-item: aparece al tercio superior */
+.lista-item-overlay { align-items: flex-start; padding-top: min(28vh, 110px); }
+.lista-item-form { display: flex; flex-direction: column; gap: 10px; margin: 12px 0 0; }
+.lista-item-row { display: flex; gap: 10px; }
+.lista-item-campo { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.lista-item-campo label { font-size: 11px; font-weight: 700; color: var(--gris-osc); text-transform: uppercase; letter-spacing: .5px; }
+.lista-item-campo select { padding: 9px 10px; border-radius: 11px; border: 1.5px solid var(--borde); background: var(--bg-elev); font-size: 15px; color: var(--texto); font-family: 'Nunito', inherit; width: 100%; }
+.lista-item-campo select:focus { outline: none; border-color: var(--accent); }
+.lista-item-campo-cat { flex: 1.6; }
+.lista-item-btn-del { color: #dc2626; border-color: #dc262640; }
+/* Botón lápiz en cada ítem de lista */
+.li-editar { background: none; border: none; color: var(--gris-osc); padding: 6px 4px; cursor: pointer; display: flex; align-items: center; flex: none; touch-action: manipulation; margin-left: 2px; }
+.li-editar svg { width: 15px; height: 15px; }
+
 /* ===== Ajustes: bottom sheet que sube desde abajo ===== */
 .sheet-overlay {
   position: fixed; inset: 0;

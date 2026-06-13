@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = 'v35';
+const APP_VERSION = '0.36';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -921,6 +921,7 @@ function renderLista() {
       : escapeHtml(it.categoria);
     const cantVal = listaCantidades.get(it.producto) || 1;
     const enCarrito = seleccionados.has(it.producto);
+    const lapizSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
     return `
       <li class="${enCarrito ? 'en-carrito' : ''}">
         <input type="checkbox" title="Marcar como puesto en el carrito" data-prod="${escapeHtml(it.producto)}" ${enCarrito ? 'checked' : ''} />
@@ -933,6 +934,7 @@ function renderLista() {
           </div>
           <button class="li-step" data-prod="${escapeHtml(it.producto)}" data-dir="1">+</button>
         </div>
+        <button class="li-editar" data-prod="${escapeHtml(it.producto)}" title="Editar">${lapizSvg}</button>
       </li>`;
   }).join('');
   ul.querySelectorAll('.li-step').forEach(btn => addTap(btn, () => {
@@ -950,6 +952,33 @@ function renderLista() {
     actualizarBotonConfirmar();
     actualizarProgreso();
   }));
+  ul.querySelectorAll('.li-editar').forEach(btn => addTap(btn, () => {
+    const prod = btn.dataset.prod;
+    const pendiente = listaPendiente().find(p => p.producto === prod);
+    const extra = listaExtras.find(e => e.producto === prod);
+    const item = pendiente || extra || { producto: prod, unidad: 'u', categoria: '' };
+    abrirListaItemModal({ nombre: item.producto, unidad: item.unidad, categoria: item.categoria }, true,
+      (nombre, unidad, categoria) => {
+        if (extra) {
+          extra.nombre = nombre;
+          extra.unidad = unidad;
+          extra.categoria = categoria;
+          extra.producto = nombre;
+        }
+        propagarInfoProducto(prod, unidad, categoria);
+        if (extra && prod !== nombre) {
+          listaExtras = listaExtras.map(e => e.producto === prod ? { ...e, producto: nombre } : e);
+        }
+        renderLista();
+      },
+      () => {
+        listaExtras = listaExtras.filter(e => e.producto !== prod);
+        seleccionados.delete(prod);
+        listaCantidades.delete(prod);
+        renderLista();
+      }
+    );
+  }));
   actualizarBotonConfirmar();
   actualizarProgreso();
 }
@@ -962,8 +991,7 @@ function actualizarBotonConfirmar() {
 }
 
 function actualizarProgreso() {
-  const lis = document.querySelectorAll('#lista-compras li');
-  const total = lis.length;
+  const total = document.querySelectorAll('#lista-compras li:not(.vacio)').length;
   const marcados = document.querySelectorAll('#lista-compras input[type=checkbox]:checked').length;
   const prog = document.getElementById('lista-progreso');
   const fill = document.getElementById('lista-prog-fill');
@@ -1003,13 +1031,105 @@ function ejecutarConfirmarCompra(aComprar, cantidades) {
   refrescarTodo();
 }
 
-addTap(document.getElementById('btn-agregar-lista'), () => {
-  abrirPrompt('¿Qué querés agregar?', '', (val) => {
-    const nombre = val.trim();
-    if (!nombre) return;
-    if (!listaExtras.find(e => e.producto === nombre) && !listaPendiente().find(p => p.producto === nombre)) {
-      listaExtras.push({ producto: nombre, unidad: 'u', cantidad: 1, stockBajo: false, categoria: '' });
+// ===== Modal agregar/editar ítem de lista =====
+const listaItemOverlay = document.getElementById('lista-item-overlay');
+const listaItemNombreEl = document.getElementById('lista-item-nombre');
+const listaItemUnidadEl = document.getElementById('lista-item-unidad');
+const listaItemCategoriaEl = document.getElementById('lista-item-categoria');
+const listaItemGuardarBtn = document.getElementById('lista-item-guardar');
+const listaItemEliminarBtn = document.getElementById('lista-item-eliminar');
+const listaItemCancelarBtn = document.getElementById('lista-item-cancelar');
+
+const UNIDADES_LISTA_BASE = ['u', 'L', 'kg', 'g', 'ml', 'rollo', 'paquete'];
+const CATEGORIAS_LISTA_BASE = ['Almacén', 'Lácteos', 'Frutas y verduras', 'Carnes', 'Limpieza', 'Higiene', 'Bebidas', 'Otros'];
+
+function listaItemInfoConocida(nombre) {
+  const c = datos.consumos.find(x => x.producto === nombre);
+  if (c) return { unidad: c.unidad, categoria: c.categoria };
+  try {
+    const db = JSON.parse(localStorage.getItem('despensa_items_extra') || '{}');
+    if (db[nombre]) return db[nombre];
+  } catch {}
+  return null;
+}
+
+function listaItemPersistirInfo(nombre, unidad, categoria) {
+  try {
+    const db = JSON.parse(localStorage.getItem('despensa_items_extra') || '{}');
+    db[nombre] = { unidad, categoria };
+    localStorage.setItem('despensa_items_extra', JSON.stringify(db));
+  } catch {}
+}
+
+function propagarInfoProducto(nombre, unidad, categoria) {
+  let cambio = false;
+  datos.consumos.forEach(c => {
+    if (c.producto === nombre && (c.unidad !== unidad || c.categoria !== categoria)) {
+      if (enCasa()) nubeEditarConsumo(c.id, { unidad, categoria });
+      c.unidad = unidad;
+      c.categoria = categoria;
+      cambio = true;
     }
+  });
+  if (cambio && !enCasa()) guardarDatos();
+  listaItemPersistirInfo(nombre, unidad, categoria);
+}
+
+function poblarSelectsListaItem() {
+  const todas_u = [...new Set([...UNIDADES_LISTA_BASE, ...unidadesPropias()])];
+  listaItemUnidadEl.innerHTML = todas_u.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  const todas_c = [...new Set([...CATEGORIAS_LISTA_BASE, ...categoriasPropias()])];
+  listaItemCategoriaEl.innerHTML = todas_c.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+}
+
+function cerrarListaItemModal() {
+  listaItemOverlay.style.display = 'none';
+  listaItemGuardarBtn.onclick = null;
+  listaItemEliminarBtn.onclick = null;
+  listaItemCancelarBtn.onclick = null;
+  listaItemNombreEl.oninput = null;
+  listaItemNombreEl.onkeydown = null;
+}
+
+function abrirListaItemModal({ nombre = '', unidad = 'u', categoria = 'Almacén' } = {}, isEdit, onGuardar, onEliminar) {
+  document.getElementById('lista-item-titulo').textContent = isEdit ? 'Editar ítem' : 'Agregar ítem';
+  poblarSelectsListaItem();
+  listaItemNombreEl.value = nombre;
+  listaItemUnidadEl.value = unidad;
+  listaItemCategoriaEl.value = categoria;
+  listaItemEliminarBtn.style.display = isEdit ? '' : 'none';
+
+  if (!isEdit) {
+    listaItemNombreEl.oninput = () => {
+      const info = listaItemInfoConocida(listaItemNombreEl.value.trim());
+      if (info) { listaItemUnidadEl.value = info.unidad; listaItemCategoriaEl.value = info.categoria; }
+    };
+  }
+
+  const guardarFn = () => {
+    const nom = listaItemNombreEl.value.trim();
+    if (!nom) { toast('Escribí un nombre'); return; }
+    cerrarListaItemModal();
+    onGuardar(nom, listaItemUnidadEl.value, listaItemCategoriaEl.value);
+  };
+  listaItemGuardarBtn.onclick = guardarFn;
+  listaItemNombreEl.onkeydown = (e) => { if (e.key === 'Enter') guardarFn(); };
+  listaItemEliminarBtn.onclick = () => { cerrarListaItemModal(); onEliminar && onEliminar(); };
+  listaItemCancelarBtn.onclick = cerrarListaItemModal;
+
+  listaItemOverlay.style.display = 'flex';
+  if (!isEdit) setTimeout(() => listaItemNombreEl.focus(), 60);
+}
+
+listaItemOverlay.addEventListener('click', (e) => { if (e.target === listaItemOverlay) cerrarListaItemModal(); });
+
+addTap(document.getElementById('btn-agregar-lista'), () => {
+  abrirListaItemModal({}, false, (nombre, unidad, categoria) => {
+    if (listaExtras.find(e => e.producto === nombre) || listaPendiente().find(p => p.producto === nombre)) {
+      toast(`${nombre} ya está en la lista`); return;
+    }
+    listaExtras.push({ producto: nombre, unidad, categoria, cantidad: 1, stockBajo: false });
+    propagarInfoProducto(nombre, unidad, categoria);
     renderLista();
   });
 });
