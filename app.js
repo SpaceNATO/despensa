@@ -224,6 +224,14 @@ function fmtFecha(iso) {
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }) +
     ' ' + d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 }
+function tiempoRelativo(iso) {
+  const mins = Math.round((Date.now() - new Date(iso)) / 60000);
+  if (mins < 1) return 'ahora';
+  if (mins < 60) return `hace ${mins} min`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `hace ${hrs} h`;
+  return fmtFecha(iso);
+}
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, ch => (
@@ -402,13 +410,13 @@ function crearDropdown(select, opts) {
   const trigger = document.createElement('button');
   trigger.type = 'button';
   trigger.className = 'cs-trigger';
-  trigger.innerHTML = (opts.colorDot ? '<span class="cs-dot"></span>' : '') + '<span class="cs-valor"></span><svg class="cs-flecha" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  trigger.innerHTML = '<span class="cs-trigger-left">' + (opts.colorDot ? '<span class="cs-dot"></span>' : '') + '<span class="cs-valor"></span></span><svg class="cs-flecha" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const menu = document.createElement('div');
   menu.className = 'cs-menu';
   menu.hidden = true;
   cs.appendChild(trigger);
   cs.appendChild(menu);
-  const valor = trigger.querySelector('.cs-valor');
+  const valor = trigger.querySelector('.cs-trigger-left .cs-valor') || trigger.querySelector('.cs-valor');
   const dotEl = trigger.querySelector('.cs-dot');
 
   function cerrar() { cs.classList.remove('abierto'); menu.hidden = true; }
@@ -611,15 +619,27 @@ function renderUltimos() {
     ul.innerHTML = '<li class="vacio">Todavía no cargaste nada.</li>';
     return;
   }
-  ul.innerHTML = ultimos.map(c => `
-    <li>
-      <span class="nombre">${escapeHtml(c.producto)}
-        <div class="fecha">${fmtFecha(c.fecha)}</div>
-      </span>
-      <span class="cant">${fmtCant(c.cantidad)} ${escapeHtml(c.unidad)}</span>
-      <button class="iconbtn editar" data-id="${c.id}" title="Editar cantidad">${icono('lapiz')}</button>
-      <button class="iconbtn borrar" data-id="${c.id}" title="Borrar">✕</button>
-    </li>`).join('');
+  ul.innerHTML = ultimos.map(c => {
+    const color = colorCategoria(c.categoria || 'Otros');
+    const cant = `+${fmtCant(c.cantidad)} ${escapeHtml(c.unidad)}`;
+    return `
+    <li class="consumo-card">
+      <div class="consumo-info">
+        <div class="consumo-nombre">${escapeHtml(c.producto)}<span class="consumo-u">${escapeHtml(c.unidad)}</span></div>
+        <div class="consumo-meta">
+          <span class="consumo-cat-dot" style="background:${color}"></span>
+          <span class="consumo-cat">${escapeHtml(c.categoria || '')}</span>
+          <span class="consumo-sep">·</span>
+          <span class="consumo-tiempo">${tiempoRelativo(c.fecha)}</span>
+        </div>
+      </div>
+      <div class="consumo-acciones">
+        <span class="consumo-cant">${cant}</span>
+        <button class="iconbtn editar" data-id="${c.id}" title="Editar cantidad">${icono('lapiz')}</button>
+        <button class="iconbtn borrar" data-id="${c.id}" title="Borrar">✕</button>
+      </div>
+    </li>`;
+  }).join('');
   ul.querySelectorAll('.borrar').forEach(btn => btn.addEventListener('click', () => {
     const c = datos.consumos.find(x => x.id === btn.dataset.id);
     const nombre = c ? c.producto : 'este registro';
