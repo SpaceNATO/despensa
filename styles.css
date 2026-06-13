@@ -37,7 +37,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'Plus Jakarta Sans', -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Nunito', -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
   color: var(--texto);
   background: transparent;
   padding-bottom: 96px;
@@ -81,7 +81,7 @@ header {
   border-radius: 0 0 24px 24px;
   box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent);
 }
-header h1 { font-size: 19px; font-weight: 700; display: flex; align-items: center; gap: 8px; letter-spacing: -0.1px; }
+header h1 { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; letter-spacing: -0.2px; }
 
 /* Íconos dibujados: heredan el color y el tamaño del texto que acompañan */
 svg.ico {
@@ -117,7 +117,7 @@ main { padding: 16px; }
 .tab.active { display: block; }
 
 h2 { font-size: 18px; margin-bottom: 12px; }
-h3 { font-size: 13.5px; font-weight: 800; color: var(--gris-osc); margin: 20px 0 8px; text-transform: uppercase; letter-spacing: 0.4px; }
+h3 { font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 700; color: var(--gris-osc); margin: 20px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
 
 .field { margin-bottom: 14px; display: flex; flex-direction: column; }
 .field label {
@@ -186,21 +186,21 @@ h3 { font-size: 13.5px; font-weight: 800; color: var(--gris-osc); margin: 20px 0
   font-size: 10.5px; font-weight: 800; letter-spacing: 0.6px;
   text-transform: uppercase; color: var(--gris-osc); margin: 0;
 }
-.subcard-cantidad { width: 118px; flex: none; }
+.subcard-cantidad { width: 148px; flex: none; }
 .subcard-unidad { flex: 1; min-width: 0; }
 .subcard-categoria { width: 100%; margin-top: 12px; }
 .cant-ctrl { display: flex; align-items: center; gap: 6px; }
 .cant-ctrl .step {
-  flex: none; width: 34px; height: 34px; border-radius: 11px;
+  flex: none; width: 32px; height: 32px; border-radius: 10px;
   background: var(--gris); border: none; color: var(--texto);
-  font-size: 22px; line-height: 1; cursor: pointer;
+  font-size: 20px; line-height: 1; cursor: pointer;
 }
 .cant-ctrl .step:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .cant-ctrl input {
   flex: 1; min-width: 0; width: 100%;
   border: none; background: none; padding: 0; border-radius: 0;
-  text-align: center; font-size: 22px; font-weight: 800; color: var(--texto);
-  font-variant-numeric: tabular-nums;
+  text-align: center; font-size: 19px; font-weight: 800; color: var(--texto);
+  font-variant-numeric: tabular-nums; font-family: 'Sora', sans-serif;
 }
 .cant-ctrl input:focus { outline: none; }
 
@@ -213,10 +213,20 @@ h3 { font-size: 13.5px; font-weight: 800; color: var(--gris-osc); margin: 20px 0
   cursor: pointer; transition: background .13s, border-color .13s, color .13s;
   line-height: 1.4; letter-spacing: 0.1px;
 }
-.u-chip.activo {
-  background: var(--accent); border-color: var(--accent); color: #fff;
-}
+.u-chip.activo { background: var(--accent); border-color: var(--accent); color: #fff; }
 .u-chip:active { opacity: .8; }
+.u-chip-add {
+  border-style: dashed; font-size: 15px; font-weight: 600;
+  padding: 3px 9px; color: var(--accent); border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.u-chip-add:active { opacity: .7; }
+
+/* Dot de color en el trigger de Categoría */
+.cs-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex: none;
+  display: inline-block; transition: background .2s;
+}
 
 /* Dropdown propio para Unidad y Categoría (en vez del selector del sistema) */
 .cs { position: relative; }

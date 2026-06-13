@@ -402,19 +402,25 @@ function crearDropdown(select, opts) {
   const trigger = document.createElement('button');
   trigger.type = 'button';
   trigger.className = 'cs-trigger';
-  trigger.innerHTML = '<span class="cs-valor"></span><svg class="cs-flecha" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  trigger.innerHTML = (opts.colorDot ? '<span class="cs-dot"></span>' : '') + '<span class="cs-valor"></span><svg class="cs-flecha" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const menu = document.createElement('div');
   menu.className = 'cs-menu';
   menu.hidden = true;
   cs.appendChild(trigger);
   cs.appendChild(menu);
   const valor = trigger.querySelector('.cs-valor');
+  const dotEl = trigger.querySelector('.cs-dot');
 
   function cerrar() { cs.classList.remove('abierto'); menu.hidden = true; }
   function abrir() { cerrarDropdowns(cs); cs.classList.add('abierto'); menu.hidden = false; }
+  function pintarDot() {
+    if (!dotEl) return;
+    try { dotEl.style.background = colorCategoria(select.value); } catch {}
+  }
   function pintar() {
     const opt = select.options[select.selectedIndex];
     valor.textContent = opt ? opt.textContent : '';
+    pintarDot();
     menu.querySelectorAll('.cs-opcion[data-val]').forEach(o => o.classList.toggle('activa', o.dataset.val === select.value));
   }
   function buildMenu() {
@@ -441,6 +447,7 @@ function crearDropdown(select, opts) {
   trigger.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden ? abrir() : cerrar(); });
   select.addEventListener('change', pintar);
   buildMenu();
+  if (opts.colorDot) setTimeout(pintarDot, 0); // CAT_COLOR aún no inicializada durante buildMenu()
 }
 function cerrarDropdowns(except) {
   document.querySelectorAll('.cs.abierto').forEach(cs => { if (cs !== except && cs._cerrar) cs._cerrar(); });
@@ -462,17 +469,44 @@ categoriasPropias().forEach(nombre => {
 
 // Chips de unidad (reemplazan al dropdown para Unidad)
 function sincronizarChips(val) {
-  document.querySelectorAll('#unidad-chips .u-chip').forEach(c => c.classList.toggle('activo', c.dataset.val === val));
+  document.querySelectorAll('#unidad-chips .u-chip:not(.u-chip-add)').forEach(c => c.classList.toggle('activo', c.dataset.val === val));
 }
-document.querySelectorAll('#unidad-chips .u-chip').forEach(chip => {
-  chip.addEventListener('click', () => {
-    inputUnidad.value = chip.dataset.val;
-    sincronizarChips(chip.dataset.val);
-  });
+
+function agregarChipUnidad(val) {
+  const chipsEl = document.getElementById('unidad-chips');
+  if ([...chipsEl.querySelectorAll('.u-chip')].some(c => c.dataset.val === val)) return;
+  const addBtn = document.getElementById('chip-add-unidad');
+  const chip = document.createElement('button');
+  chip.type = 'button'; chip.className = 'u-chip'; chip.dataset.val = val; chip.textContent = val;
+  chip.addEventListener('click', () => { inputUnidad.value = val; sincronizarChips(val); });
+  chipsEl.insertBefore(chip, addBtn);
+  if (![...inputUnidad.options].some(o => o.value === val)) inputUnidad.add(new Option(val, val));
+}
+
+function unidadesPropias() { try { return JSON.parse(localStorage.getItem('despensa_unidades')) || []; } catch { return []; } }
+
+document.querySelectorAll('#unidad-chips .u-chip:not(.u-chip-add)').forEach(chip => {
+  chip.addEventListener('click', () => { inputUnidad.value = chip.dataset.val; sincronizarChips(chip.dataset.val); });
 });
+
+// Inyectar unidades guardadas por el usuario
+unidadesPropias().forEach(u => agregarChipUnidad(u));
+
+// Chip "+"
+document.getElementById('chip-add-unidad').addEventListener('click', () => {
+  const nombre = (prompt('Nombre de la nueva unidad (ej: docena, atado):') || '').trim();
+  if (!nombre) return;
+  const lista = unidadesPropias();
+  if (!lista.includes(nombre)) { lista.push(nombre); localStorage.setItem('despensa_unidades', JSON.stringify(lista)); }
+  agregarChipUnidad(nombre);
+  inputUnidad.value = nombre;
+  sincronizarChips(nombre);
+});
+
 sincronizarChips(inputUnidad.value);
 
 crearDropdown(inputCategoria, {
+  colorDot: true,
   onAgregar() {
     const nombre = (prompt('Nombre de la nueva categoría:') || '').trim();
     if (!nombre) return;

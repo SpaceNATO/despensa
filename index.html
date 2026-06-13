@@ -10,8 +10,8 @@
   <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=16" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=17" />
 </head>
 <body>
   <header>
@@ -43,7 +43,7 @@
             <label for="cantidad">Cantidad</label>
             <div class="cant-ctrl">
               <button type="button" class="step" id="cant-menos" aria-label="Menos">−</button>
-              <input id="cantidad" name="cantidad" type="number" step="any" min="0" value="1" required />
+              <input id="cantidad" name="cantidad" type="number" step="any" min="0" max="9999" value="1" required />
               <button type="button" class="step" id="cant-mas" aria-label="Más">+</button>
             </div>
           </div>
@@ -57,6 +57,7 @@
               <button type="button" class="u-chip" data-val="ml">ml</button>
               <button type="button" class="u-chip" data-val="rollo">rollo</button>
               <button type="button" class="u-chip" data-val="paquete">paq.</button>
+              <button type="button" class="u-chip u-chip-add" id="chip-add-unidad" title="Agregar unidad">+</button>
             </div>
             <select id="unidad" name="unidad" aria-label="Unidad" hidden>
               <option value="u">u</option>
@@ -236,6 +237,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
-  <script src="app.js?v=16"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>
