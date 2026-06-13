@@ -61,7 +61,7 @@ async function fbLogin() {
     const off = fbAuth.onAuthStateChanged(u => { if (u) { off(); res(u); } });
   });
 }
-function avisarErrorNube(e) { console.warn('nube:', e && e.message); }
+function avisarErrorNube(e) { console.warn('nube:', e && e.message); toast('Error de conexión. Reintentá.'); }
 
 // Código de casa difícil de adivinar (sin letras/números que se confunden)
 function generarCodigo() {
@@ -90,11 +90,9 @@ function nubeConfirmarCompra(aComprar, cantidades) {
     if (!c.comprado && aComprar.has(c.producto)) batch.update(casaRef().collection('consumos').doc(c.id), { comprado: true });
   }
   for (const prod of aComprar) {
-    const st = datos.stock[prod];
-    if (st) {
-      const nivel = (cantidades && cantidades[prod] > 0) ? cantidades[prod] : Math.max(st.max || 0, st.minimo || 0);
-      if (nivel > 0) batch.set(casaRef().collection('stock').doc(idStock(prod)), { producto: prod, actual: nivel, max: nivel }, { merge: true });
-    }
+    const st = datos.stock[prod] || {};
+    const nivel = (cantidades && cantidades[prod] > 0) ? cantidades[prod] : Math.max(st.max || 0, st.minimo || 0, 1);
+    batch.set(casaRef().collection('stock').doc(idStock(prod)), { producto: prod, actual: nivel, max: nivel }, { merge: true });
   }
   batch.set(casaRef().collection('meta').doc('estado'), { carrito: [] }, { merge: true });
   batch.commit().catch(avisarErrorNube);
@@ -133,7 +131,7 @@ function escucharCasa() {
   }, avisarErrorNube));
   casaUnsub.push(ref.collection('stock').onSnapshot(snap => {
     const s = {};
-    snap.docs.forEach(d => { const v = d.data(); s[v.producto] = { actual: Math.max(0, v.actual || 0), minimo: v.minimo || 0 }; });
+    snap.docs.forEach(d => { const v = d.data(); s[v.producto] = { actual: Math.max(0, v.actual || 0), minimo: v.minimo || 0, max: v.max || 0 }; });
     nubeStock = s; recomponerDesdeNube();
   }, avisarErrorNube));
   casaUnsub.push(ref.collection('meta').doc('estado').onSnapshot(d => {
@@ -849,7 +847,7 @@ function renderStock() {
     });
     if (isTouchDevice) {
       inp.setAttribute('readonly', '');
-      inp.addEventListener('click', () => abrirNumpad(inp));
+      inp.addEventListener('touchend', (e) => { e.preventDefault(); abrirNumpad(inp); }, { passive: false });
     }
   });
 }
@@ -907,7 +905,9 @@ function renderLista() {
   // Inicializar cantidades para ítems nuevos
   items.forEach(it => {
     if (!listaCantidades.has(it.producto)) {
-      listaCantidades.set(it.producto, it.cantidad > 0 ? it.cantidad : 1);
+      const st = datos.stock[it.producto];
+      const defQ = it.cantidad > 0 ? it.cantidad : Math.max((st && st.max) || 0, (st && st.minimo) || 0, 1);
+      listaCantidades.set(it.producto, defQ);
     }
   });
   ul.innerHTML = items.map(it => {
@@ -965,9 +965,10 @@ function ejecutarConfirmarCompra(aComprar, cantidades) {
   // Repone el stock: usa la cantidad comprada editada, o el máximo registrado
   for (const prod of aComprar) {
     const st = datos.stock[prod];
-    if (!st) continue;
-    const nivel = (cantidades && cantidades[prod] > 0) ? cantidades[prod] : Math.max(st.max || 0, st.minimo || 0);
-    if (nivel > 0) { st.actual = nivel; st.max = nivel; }
+    const nivel = (cantidades && cantidades[prod] > 0) ? cantidades[prod] : Math.max((st && st.max) || 0, (st && st.minimo) || 0, 1);
+    if (!st) datos.stock[prod] = { actual: 0, minimo: 0, max: 0 };
+    datos.stock[prod].actual = nivel;
+    datos.stock[prod].max = nivel;
   }
   seleccionados.clear();
   datos.carrito = [];
@@ -1782,8 +1783,8 @@ function cerrarNumpad() {
 }
 
 document.querySelectorAll('.nk[data-k]').forEach(btn => {
-  btn.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
     const k = btn.dataset.k;
     if (k === '⌫') {
       numpadValor = numpadValor.slice(0, -1);
@@ -1795,7 +1796,6 @@ document.querySelectorAll('.nk[data-k]').forEach(btn => {
     }
     const display = numpadValor || '0';
     document.getElementById('numpad-display').textContent = display;
-    // Actualizar el input target Y el #cant-num si es la cantidad principal
     if (numpadTarget) {
       numpadTarget.value = numpadValor;
       if (numpadTarget === inputCantidad) cantNumSpan.textContent = display;
@@ -1817,7 +1817,8 @@ document.getElementById('numpad-overlay').addEventListener('click', (e) => {
   if (e.target === document.getElementById('numpad-overlay') && Date.now() - _numpadOpenAt > 350) cerrarNumpad();
 });
 
-// Tocar el número de cantidad abre el numpad (click funciona en móvil y desktop)
+// Tocar el número de cantidad abre el numpad (ambos eventos para touch + desktop)
+cantNumSpan.addEventListener('touchend', (e) => { e.preventDefault(); abrirNumpad(inputCantidad); }, { passive: false });
 cantNumSpan.addEventListener('click', () => abrirNumpad(inputCantidad));
 
 // ===== Teclado QWERTY propio =====
@@ -1869,8 +1870,8 @@ function _qActualizarSugs() {
     .filter(n => { const nn = normaliza(n); return nn.startsWith(texto) && nn !== texto; })
     .slice(0, 10);
   cont.innerHTML = sugs.map(s => `<button class="qwerty-sug">${escapeHtml(s)}</button>`).join('');
-  cont.querySelectorAll('.qwerty-sug').forEach(btn => btn.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
+  cont.querySelectorAll('.qwerty-sug').forEach(btn => btn.addEventListener('click', (e) => {
+    e.stopPropagation();
     qwertyValor = btn.textContent;
     _qActualizarDisplay();
     if (qwertyTarget) qwertyTarget.dispatchEvent(new Event('input', { bubbles: true }));
@@ -1915,8 +1916,8 @@ function _qBuildGrid() {
     else { lbl = up ? k.toUpperCase() : k; }
     return `<button class="${cls}" data-qk="${escapeHtml(dat)}">${escapeHtml(lbl)}</button>`;
   }).join('')}</div>`).join('');
-  grid.querySelectorAll('[data-qk]').forEach(btn => btn.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
+  grid.querySelectorAll('[data-qk]').forEach(btn => btn.addEventListener('click', (e) => {
+    e.stopPropagation();
     _qHandleKey(btn.dataset.qk);
   }));
 }
@@ -1933,5 +1934,5 @@ document.getElementById('qwerty-overlay').addEventListener('click', (e) => {
 // Interceptar el campo Producto en dispositivos táctiles
 if (isTouchDevice) {
   inputProducto.setAttribute('readonly', '');
-  inputProducto.addEventListener('click', () => abrirQwerty(inputProducto));
+  inputProducto.addEventListener('touchend', (e) => { e.preventDefault(); abrirQwerty(inputProducto); }, { passive: false });
 }

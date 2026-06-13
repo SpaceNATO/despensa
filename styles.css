@@ -202,6 +202,7 @@ h3 { font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 700; color: 
   font-family: 'Sora', sans-serif; font-variant-numeric: tabular-nums;
   color: var(--texto); background: none; border: none; cursor: pointer;
   user-select: none; padding: 4px 0; line-height: 1; border-radius: 8px;
+  touch-action: manipulation;
 }
 .cant-num:active { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 
@@ -880,6 +881,7 @@ canvas { margin: 12px 0; max-height: 320px; }
   border-radius: 9px; background: var(--card); border: .5px solid var(--borde);
   font-size: 17px; font-weight: 500; font-family: 'Nunito', sans-serif;
   color: var(--texto); cursor: pointer;
+  touch-action: manipulation; user-select: none;
 }
 .qk:active { background: var(--gris); }
 .qk-special { background: var(--gris); font-size: 13px; max-width: 54px; font-weight: 700; }
@@ -915,6 +917,7 @@ canvas { margin: 12px 0; max-height: 320px; }
   color: var(--texto); cursor: pointer;
   box-shadow: 0 2px 6px rgba(0,0,0,.06);
   transition: background .08s;
+  touch-action: manipulation; user-select: none;
 }
 .nk:active { background: var(--gris); }
 .nk-special { font-size: 17px; background: var(--gris); }
