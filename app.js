@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.36';
+const APP_VERSION = '0.37';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -479,6 +479,7 @@ function crearDropdown(select, opts) {
   select.addEventListener('change', pintar);
   buildMenu();
   if (opts.colorDot) setTimeout(() => { buildMenu(); pintarDot(); }, 0); // CAT_COLOR no inicializada aún
+  return cs;
 }
 function cerrarDropdowns(except) {
   document.querySelectorAll('.cs.abierto').forEach(cs => { if (cs !== except && cs._cerrar) cs._cerrar(); });
@@ -921,7 +922,6 @@ function renderLista() {
       : escapeHtml(it.categoria);
     const cantVal = listaCantidades.get(it.producto) || 1;
     const enCarrito = seleccionados.has(it.producto);
-    const lapizSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
     return `
       <li class="${enCarrito ? 'en-carrito' : ''}">
         <input type="checkbox" title="Marcar como puesto en el carrito" data-prod="${escapeHtml(it.producto)}" ${enCarrito ? 'checked' : ''} />
@@ -934,7 +934,7 @@ function renderLista() {
           </div>
           <button class="li-step" data-prod="${escapeHtml(it.producto)}" data-dir="1">+</button>
         </div>
-        <button class="li-editar" data-prod="${escapeHtml(it.producto)}" title="Editar">${lapizSvg}</button>
+        <button class="iconbtn li-editar" data-prod="${escapeHtml(it.producto)}" title="Editar">${icono('lapiz')}</button>
       </li>`;
   }).join('');
   ul.querySelectorAll('.li-step').forEach(btn => addTap(btn, () => {
@@ -1039,6 +1039,8 @@ const listaItemCategoriaEl = document.getElementById('lista-item-categoria');
 const listaItemGuardarBtn = document.getElementById('lista-item-guardar');
 const listaItemEliminarBtn = document.getElementById('lista-item-eliminar');
 const listaItemCancelarBtn = document.getElementById('lista-item-cancelar');
+const csListaUnidad = crearDropdown(listaItemUnidadEl, {});
+const csListaCategoria = crearDropdown(listaItemCategoriaEl, { colorDot: true });
 
 const UNIDADES_LISTA_BASE = ['u', 'L', 'kg', 'g', 'ml', 'rollo', 'paquete'];
 const CATEGORIAS_LISTA_BASE = ['Almacén', 'Lácteos', 'Frutas y verduras', 'Carnes', 'Limpieza', 'Higiene', 'Bebidas', 'Otros'];
@@ -1080,6 +1082,8 @@ function poblarSelectsListaItem() {
   listaItemUnidadEl.innerHTML = todas_u.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
   const todas_c = [...new Set([...CATEGORIAS_LISTA_BASE, ...categoriasPropias()])];
   listaItemCategoriaEl.innerHTML = todas_c.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  csListaUnidad._rebuild();
+  csListaCategoria._rebuild();
 }
 
 function cerrarListaItemModal() {
@@ -1096,13 +1100,20 @@ function abrirListaItemModal({ nombre = '', unidad = 'u', categoria = 'Almacén'
   poblarSelectsListaItem();
   listaItemNombreEl.value = nombre;
   listaItemUnidadEl.value = unidad;
+  listaItemUnidadEl.dispatchEvent(new Event('change'));
   listaItemCategoriaEl.value = categoria;
+  listaItemCategoriaEl.dispatchEvent(new Event('change'));
   listaItemEliminarBtn.style.display = isEdit ? '' : 'none';
 
   if (!isEdit) {
     listaItemNombreEl.oninput = () => {
       const info = listaItemInfoConocida(listaItemNombreEl.value.trim());
-      if (info) { listaItemUnidadEl.value = info.unidad; listaItemCategoriaEl.value = info.categoria; }
+      if (info) {
+        listaItemUnidadEl.value = info.unidad;
+        listaItemUnidadEl.dispatchEvent(new Event('change'));
+        listaItemCategoriaEl.value = info.categoria;
+        listaItemCategoriaEl.dispatchEvent(new Event('change'));
+      }
     };
   }
 
@@ -1140,7 +1151,7 @@ document.getElementById('btn-confirmar').addEventListener('click', () => {
   const aComprar = seleccionados.size > 0 ? new Set(seleccionados) : new Set(todosItems.map(i => i.producto));
   if (aComprar.size === 0) return;
   const cantidades = {};
-  items.forEach(it => {
+  todosItems.forEach(it => {
     const v = listaCantidades.get(it.producto) || (it.cantidad > 0 ? it.cantidad : 1);
     if (v > 0) cantidades[it.producto] = v;
   });
