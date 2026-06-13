@@ -263,9 +263,11 @@ h3 { font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 700; color: 
 }
 .cs-menu[hidden] { display: none; }
 .cs-opcion {
+  display: flex; align-items: center; gap: 8px;
   padding: 11px 12px; font-size: 15px; border-radius: 9px;
-  cursor: pointer; white-space: nowrap; color: var(--texto);
+  cursor: pointer; color: var(--texto);
 }
+.cs-opcion-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
 .cs-opcion:hover { background: var(--gris); }
 .cs-opcion.activa { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); font-weight: 600; }
 .cs-opcion.cs-agregar { color: var(--accent); font-weight: 700; border-top: 1px solid var(--borde); margin-top: 4px; padding-top: 12px; }
@@ -540,7 +542,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .stock-item.bajo .si-min, .stock-item.cero .si-min,
 .stock-item.bajo .stock-minimo, .stock-item.cero .stock-minimo { color: var(--rojo); }
 .si-barra { height: 5px; border-radius: 3px; background: var(--gris); margin-top: 9px; overflow: hidden; }
-.si-barra span { display: block; height: 100%; border-radius: 3px; background: var(--verde); transition: width .25s; }
+.si-barra span { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width .25s; }
 .stock-item.bajo .si-barra span, .stock-item.cero .si-barra span { background: var(--rojo); }
 
 /* Tarjetas de Datos y respaldo */
@@ -659,9 +661,17 @@ canvas { margin: 12px 0; max-height: 320px; }
   box-shadow: 0 12px 48px rgba(0, 0, 0, .45);
   animation: pop .18s ease;
 }
-.modal p { font-size: 17px; line-height: 1.4; margin-bottom: 22px; text-align: center; white-space: pre-line; }
-.modal-botones { display: flex; gap: 12px; }
+.modal p { font-size: 17px; line-height: 1.4; margin-bottom: 12px; text-align: center; white-space: pre-line; }
+.modal-botones { display: flex; gap: 12px; margin-top: 18px; }
 .modal-botones button { flex: 1; margin-top: 0; }
+.modal-prompt-input {
+  display: none;
+  width: 100%; margin: 8px 0 0;
+  padding: 11px 13px; border-radius: 11px;
+  border: 1.5px solid var(--borde); background: var(--bg-elev);
+  font-size: 16px; color: var(--texto); font-family: 'Nunito', inherit;
+}
+.modal-prompt-input:focus { outline: none; border-color: var(--accent); }
 
 /* ===== Ajustes: bottom sheet que sube desde abajo ===== */
 .sheet-overlay {

@@ -86,7 +86,7 @@ function nubeConfirmarCompra(aComprar) {
   }
   for (const prod of aComprar) {
     const st = datos.stock[prod];
-    if (st && st.actual < st.minimo) batch.set(casaRef().collection('stock').doc(idStock(prod)), { producto: prod, actual: st.minimo, max: st.minimo }, { merge: true });
+    if (st) { const nivel = Math.max(st.max || 0, st.minimo || 0); if (nivel > 0) batch.set(casaRef().collection('stock').doc(idStock(prod)), { producto: prod, actual: nivel, max: nivel }, { merge: true }); }
   }
   batch.set(casaRef().collection('meta').doc('estado'), { carrito: [] }, { merge: true });
   batch.commit().catch(avisarErrorNube);
@@ -383,7 +383,6 @@ form.addEventListener('submit', (e) => {
   inputCategoria.value = ultimaCat; // no volver siempre a "Almacén"
   sincronizarChips(inputUnidad.value);
   inputCategoria.dispatchEvent(new Event('change'));
-  inputProducto.focus();
   refrescarTodo();
 });
 
@@ -437,7 +436,15 @@ function crearDropdown(select, opts) {
       const div = document.createElement('div');
       div.className = 'cs-opcion';
       div.dataset.val = o.value;
-      div.textContent = o.textContent;
+      if (opts.colorDot) {
+        const dot = document.createElement('span');
+        dot.className = 'cs-opcion-dot';
+        try { dot.style.background = colorCategoria(o.value); } catch {}
+        div.appendChild(dot);
+      }
+      const txt = document.createElement('span');
+      txt.textContent = o.textContent;
+      div.appendChild(txt);
       div.addEventListener('click', () => { select.value = o.value; select.dispatchEvent(new Event('change', { bubbles: true })); cerrar(); });
       menu.appendChild(div);
     });
@@ -455,7 +462,7 @@ function crearDropdown(select, opts) {
   trigger.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden ? abrir() : cerrar(); });
   select.addEventListener('change', pintar);
   buildMenu();
-  if (opts.colorDot) setTimeout(pintarDot, 0); // CAT_COLOR aún no inicializada durante buildMenu()
+  if (opts.colorDot) setTimeout(() => { buildMenu(); pintarDot(); }, 0); // CAT_COLOR no inicializada aún
 }
 function cerrarDropdowns(except) {
   document.querySelectorAll('.cs.abierto').forEach(cs => { if (cs !== except && cs._cerrar) cs._cerrar(); });
@@ -502,13 +509,13 @@ unidadesPropias().forEach(u => agregarChipUnidad(u));
 
 // Chip "+"
 document.getElementById('chip-add-unidad').addEventListener('click', () => {
-  const nombre = (prompt('Nombre de la nueva unidad (ej: docena, atado):') || '').trim();
-  if (!nombre) return;
-  const lista = unidadesPropias();
-  if (!lista.includes(nombre)) { lista.push(nombre); localStorage.setItem('despensa_unidades', JSON.stringify(lista)); }
-  agregarChipUnidad(nombre);
-  inputUnidad.value = nombre;
-  sincronizarChips(nombre);
+  abrirPrompt('Nueva unidad (ej: docena, atado, sobre):', '', (nombre) => {
+    const lista = unidadesPropias();
+    if (!lista.includes(nombre)) { lista.push(nombre); localStorage.setItem('despensa_unidades', JSON.stringify(lista)); }
+    agregarChipUnidad(nombre);
+    inputUnidad.value = nombre;
+    sincronizarChips(nombre);
+  });
 });
 
 sincronizarChips(inputUnidad.value);
@@ -516,16 +523,16 @@ sincronizarChips(inputUnidad.value);
 crearDropdown(inputCategoria, {
   colorDot: true,
   onAgregar() {
-    const nombre = (prompt('Nombre de la nueva categoría:') || '').trim();
-    if (!nombre) return;
-    if (![...inputCategoria.options].some(o => o.value.toLowerCase() === nombre.toLowerCase())) {
-      inputCategoria.add(new Option(nombre, nombre));
-      guardarCategoriaPropia(nombre);
-    }
-    inputCategoria.value = nombre;
-    const cs = inputCategoria.closest('.cs');
-    if (cs && cs._rebuild) cs._rebuild();        // que aparezca en el menú
-    inputCategoria.dispatchEvent(new Event('change'));
+    abrirPrompt('Nombre de la nueva categoría:', '', (nombre) => {
+      if (![...inputCategoria.options].some(o => o.value.toLowerCase() === nombre.toLowerCase())) {
+        inputCategoria.add(new Option(nombre, nombre));
+        guardarCategoriaPropia(nombre);
+      }
+      inputCategoria.value = nombre;
+      const cs = inputCategoria.closest('.cs');
+      if (cs && cs._rebuild) cs._rebuild();
+      inputCategoria.dispatchEvent(new Event('change'));
+    });
   }
 });
 
@@ -652,13 +659,21 @@ function renderUltimos() {
   ul.querySelectorAll('.editar').forEach(btn => btn.addEventListener('click', () => {
     const c = datos.consumos.find(x => x.id === btn.dataset.id);
     if (!c) return;
-    const val = prompt(`Nueva cantidad para ${c.producto} (${c.unidad}):`, c.cantidad);
-    if (val === null) return;
-    const num = parseFloat(val);
-    if (!(num > 0)) { toast('Cantidad inválida'); return; }
-    if (enCasa()) { nubeEditarConsumo(c.id, { cantidad: num }); toast('Cantidad actualizada'); return; }
-    c.cantidad = num;
-    guardarDatos(); toast('Cantidad actualizada'); refrescarTodo();
+    abrirPrompt(`Cantidad de ${c.producto} (${c.unidad}):`, c.cantidad, (val) => {
+      const num = parseFloat(val);
+      if (!(num > 0)) { toast('Cantidad inválida'); return; }
+      const diff = num - c.cantidad; // positivo = consumió más, stock baja más
+      if (enCasa()) {
+        nubeEditarConsumo(c.id, { cantidad: num });
+        if (datos.stock[c.producto] && diff !== 0) nubeIncrementarStock(c.producto, -diff);
+        toast('Actualizado'); return;
+      }
+      if (datos.stock[c.producto] && diff !== 0) {
+        datos.stock[c.producto].actual = Math.max(0, (datos.stock[c.producto].actual || 0) - diff);
+      }
+      c.cantidad = num;
+      guardarDatos(); toast('Actualizado'); refrescarTodo();
+    });
   }));
 }
 
@@ -717,7 +732,7 @@ function colapsadasStock() {
 }
 function guardarColapsadas(set) { localStorage.setItem('despensa_stock_colapsadas', JSON.stringify([...set])); }
 // Referencia "lleno" para la barra: el máximo que tuvo, o el actual/mínimo
-function refStock(st) { return Math.max(st.max || 0, st.actual || 0, st.minimo || 0, 1); }
+function refStock(st) { return Math.max(st.max || 0, st.minimo || 0, 1); }
 
 function renderStock() {
   const cont = document.getElementById('lista-stock');
@@ -758,9 +773,7 @@ function renderStock() {
           <div class="si-top">
             <div class="si-info"><div class="si-nombre">${escapeHtml(n)} <small>${escapeHtml(cat[n].unidad)}</small> ${badge}</div></div>
             <div class="si-ctrl">
-              <button class="iconbtn menos" data-prod="${escapeHtml(n)}" aria-label="Menos">−</button>
               <input class="stock-actual" type="number" step="any" data-prod="${escapeHtml(n)}" value="${st.actual}" />
-              <button class="iconbtn mas" data-prod="${escapeHtml(n)}" aria-label="Más">+</button>
             </div>
             <label class="si-min">MÍN<input class="stock-minimo" type="number" step="any" data-prod="${escapeHtml(n)}" value="${st.minimo}" /></label>
           </div>
@@ -810,16 +823,6 @@ function renderStock() {
     return datos.stock[prod];
   }
   const maxDe = prod => (datos.stock[prod] && datos.stock[prod].max) || 0;
-  cont.querySelectorAll('.mas').forEach(b => b.addEventListener('click', () => {
-    const p = b.dataset.prod;
-    if (enCasa()) { const na = ((datos.stock[p] && datos.stock[p].actual) || 0) + 1; nubeIncrementarStock(p, 1); nubeSetStockCampo(p, 'max', na); return; }
-    const s = asegurar(p); s.actual += 1; s.max = s.actual; guardarDatos(); renderStock(); renderLista();
-  }));
-  cont.querySelectorAll('.menos').forEach(b => b.addEventListener('click', () => {
-    const p = b.dataset.prod;
-    if (enCasa()) { nubeIncrementarStock(p, -1); return; }
-    const s = asegurar(p); s.actual = Math.max(0, s.actual - 1); guardarDatos(); renderStock(); renderLista();
-  }));
   cont.querySelectorAll('.stock-actual').forEach(inp => inp.addEventListener('change', () => {
     const p = inp.dataset.prod, v = parseFloat(inp.value) || 0;
     if (enCasa()) { nubeSetStockCampo(p, 'actual', v); if (v > ((datos.stock[p] && datos.stock[p].actual) || 0)) nubeSetStockCampo(p, 'max', v); return; }
@@ -919,12 +922,12 @@ function ejecutarConfirmarCompra(aComprar) {
   for (const c of datos.consumos) {
     if (!c.comprado && aComprar.has(c.producto)) c.comprado = true;
   }
-  // Al comprar, repone el stock al menos hasta el mínimo (deja de estar "bajo")
+  // Al comprar, repone el stock al nivel máximo registrado (o al mínimo si no hay máximo)
   for (const prod of aComprar) {
-    if (datos.stock[prod] && datos.stock[prod].actual < datos.stock[prod].minimo) {
-      datos.stock[prod].actual = datos.stock[prod].minimo;
-      datos.stock[prod].max = datos.stock[prod].minimo; // barra al 100% justo después de comprar
-    }
+    const st = datos.stock[prod];
+    if (!st) continue;
+    const nivel = Math.max(st.max || 0, st.minimo || 0);
+    if (nivel > 0) { st.actual = nivel; st.max = nivel; }
   }
   seleccionados.clear();
   datos.carrito = [];
@@ -1201,11 +1204,11 @@ window.addEventListener('appinstalled', () => { btnInstalar.style.display = 'non
 const modalOverlay = document.getElementById('modal-overlay');
 const modalMensaje = document.getElementById('modal-mensaje');
 let modalAccion = null;
+let modalOnClose = null; // limpieza extra para modo prompt
 
 function abrirConfirm(mensaje, onSi, soloInfo) {
   modalMensaje.textContent = mensaje;
   modalAccion = onSi;
-  // soloInfo = aviso de una sola opción ("Entendido"), sin pregunta Sí/No.
   document.getElementById('modal-no').style.display = soloInfo ? 'none' : '';
   document.getElementById('modal-si').textContent = soloInfo ? 'Entendido' : 'Sí';
   modalOverlay.style.display = 'flex';
@@ -1213,6 +1216,45 @@ function abrirConfirm(mensaje, onSi, soloInfo) {
 function cerrarConfirm() {
   modalOverlay.style.display = 'none';
   modalAccion = null;
+  if (modalOnClose) { modalOnClose(); modalOnClose = null; }
+}
+
+// Modal con campo de texto (reemplaza prompt() del sistema)
+function abrirPrompt(msg, valorInicial, onOk) {
+  const modal = modalOverlay.querySelector('.modal');
+  let inp = modal.querySelector('.modal-prompt-input');
+  if (!inp) {
+    inp = document.createElement('input');
+    inp.className = 'modal-prompt-input';
+    inp.type = 'text';
+    modalMensaje.after(inp);
+  }
+  inp.value = valorInicial != null ? String(valorInicial) : '';
+  inp.style.display = '';
+  document.getElementById('modal-no').style.display = '';
+  document.getElementById('modal-no').textContent = 'Cancelar';
+  document.getElementById('modal-si').textContent = 'Listo';
+  modalMensaje.textContent = msg;
+
+  function onKey(e) {
+    if (e.key === 'Enter') document.getElementById('modal-si').click();
+    if (e.key === 'Escape') cerrarConfirm();
+  }
+  inp.addEventListener('keydown', onKey);
+
+  modalOnClose = () => {
+    inp.style.display = 'none';
+    inp.removeEventListener('keydown', onKey);
+    document.getElementById('modal-no').textContent = 'No';
+    document.getElementById('modal-si').textContent = 'Sí';
+  };
+  modalAccion = () => {
+    const val = inp.value.trim();
+    if (val) onOk(val);
+  };
+
+  modalOverlay.style.display = 'flex';
+  setTimeout(() => inp.focus(), 60);
 }
 document.getElementById('modal-si').addEventListener('click', () => {
   const accion = modalAccion;
