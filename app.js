@@ -91,8 +91,10 @@ function nubeConfirmarCompra(aComprar, cantidades) {
   }
   for (const prod of aComprar) {
     const st = datos.stock[prod] || {};
-    const nivel = (cantidades && cantidades[prod] > 0) ? cantidades[prod] : Math.max(st.max || 0, st.minimo || 0, 1);
-    batch.set(casaRef().collection('stock').doc(idStock(prod)), { producto: prod, actual: nivel, max: nivel }, { merge: true });
+    const comprado = (cantidades && cantidades[prod] > 0) ? cantidades[prod] : Math.max(st.max || 0, st.minimo || 0, 1);
+    const nuevoActual = (st.actual || 0) + comprado;
+    const nuevoMax = Math.max(st.max || 0, nuevoActual);
+    batch.set(casaRef().collection('stock').doc(idStock(prod)), { producto: prod, actual: nuevoActual, max: nuevoMax }, { merge: true });
   }
   batch.set(casaRef().collection('meta').doc('estado'), { carrito: [] }, { merge: true });
   batch.commit().catch(avisarErrorNube);
@@ -965,10 +967,11 @@ function ejecutarConfirmarCompra(aComprar, cantidades) {
   // Repone el stock: usa la cantidad comprada editada, o el máximo registrado
   for (const prod of aComprar) {
     const st = datos.stock[prod];
-    const nivel = (cantidades && cantidades[prod] > 0) ? cantidades[prod] : Math.max((st && st.max) || 0, (st && st.minimo) || 0, 1);
+    const comprado = (cantidades && cantidades[prod] > 0) ? cantidades[prod] : Math.max((st && st.max) || 0, (st && st.minimo) || 0, 1);
     if (!st) datos.stock[prod] = { actual: 0, minimo: 0, max: 0 };
-    datos.stock[prod].actual = nivel;
-    datos.stock[prod].max = nivel;
+    const nuevoActual = (datos.stock[prod].actual || 0) + comprado;
+    datos.stock[prod].actual = nuevoActual;
+    datos.stock[prod].max = Math.max(datos.stock[prod].max || 0, nuevoActual);
   }
   seleccionados.clear();
   datos.carrito = [];
