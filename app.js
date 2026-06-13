@@ -86,7 +86,7 @@ function nubeConfirmarCompra(aComprar) {
   }
   for (const prod of aComprar) {
     const st = datos.stock[prod];
-    if (st && st.actual < st.minimo) batch.set(casaRef().collection('stock').doc(idStock(prod)), { producto: prod, actual: st.minimo }, { merge: true });
+    if (st && st.actual < st.minimo) batch.set(casaRef().collection('stock').doc(idStock(prod)), { producto: prod, actual: st.minimo, max: st.minimo }, { merge: true });
   }
   batch.set(casaRef().collection('meta').doc('estado'), { carrito: [] }, { merge: true });
   batch.commit().catch(avisarErrorNube);
@@ -373,8 +373,7 @@ form.addEventListener('submit', (e) => {
   form.reset();
   document.getElementById('cantidad').value = 1;
   inputCategoria.value = ultimaCat; // no volver siempre a "Almacén"
-  // refrescar los dropdowns propios al estado actual
-  inputUnidad.dispatchEvent(new Event('change'));
+  sincronizarChips(inputUnidad.value);
   inputCategoria.dispatchEvent(new Event('change'));
   inputProducto.focus();
   refrescarTodo();
@@ -385,8 +384,8 @@ function autocompletarProducto() {
   const info = infoProducto(inputProducto.value);
   if (info) {
     inputUnidad.value = info.unidad;
+    sincronizarChips(info.unidad);
     inputCategoria.value = info.categoria;
-    inputUnidad.dispatchEvent(new Event('change'));   // refresca el dropdown propio
     inputCategoria.dispatchEvent(new Event('change'));
   }
 }
@@ -461,7 +460,18 @@ categoriasPropias().forEach(nombre => {
   if (![...inputCategoria.options].some(o => o.value === nombre)) inputCategoria.add(new Option(nombre, nombre));
 });
 
-crearDropdown(inputUnidad);
+// Chips de unidad (reemplazan al dropdown para Unidad)
+function sincronizarChips(val) {
+  document.querySelectorAll('#unidad-chips .u-chip').forEach(c => c.classList.toggle('activo', c.dataset.val === val));
+}
+document.querySelectorAll('#unidad-chips .u-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    inputUnidad.value = chip.dataset.val;
+    sincronizarChips(chip.dataset.val);
+  });
+});
+sincronizarChips(inputUnidad.value);
+
 crearDropdown(inputCategoria, {
   onAgregar() {
     const nombre = (prompt('Nombre de la nueva categoría:') || '').trim();
@@ -748,8 +758,8 @@ function renderStock() {
   const maxDe = prod => (datos.stock[prod] && datos.stock[prod].max) || 0;
   cont.querySelectorAll('.mas').forEach(b => b.addEventListener('click', () => {
     const p = b.dataset.prod;
-    if (enCasa()) { const na = ((datos.stock[p] && datos.stock[p].actual) || 0) + 1; nubeIncrementarStock(p, 1); nubeSetStockCampo(p, 'max', Math.max(maxDe(p), na)); return; }
-    const s = asegurar(p); s.actual += 1; s.max = Math.max(s.max || 0, s.actual); guardarDatos(); renderStock(); renderLista();
+    if (enCasa()) { const na = ((datos.stock[p] && datos.stock[p].actual) || 0) + 1; nubeIncrementarStock(p, 1); nubeSetStockCampo(p, 'max', na); return; }
+    const s = asegurar(p); s.actual += 1; s.max = s.actual; guardarDatos(); renderStock(); renderLista();
   }));
   cont.querySelectorAll('.menos').forEach(b => b.addEventListener('click', () => {
     const p = b.dataset.prod;
@@ -758,8 +768,8 @@ function renderStock() {
   }));
   cont.querySelectorAll('.stock-actual').forEach(inp => inp.addEventListener('change', () => {
     const p = inp.dataset.prod, v = parseFloat(inp.value) || 0;
-    if (enCasa()) { nubeSetStockCampo(p, 'actual', v); nubeSetStockCampo(p, 'max', Math.max(maxDe(p), v)); return; }
-    const s = asegurar(p); s.actual = v; s.max = Math.max(s.max || 0, v); guardarDatos(); renderStock(); renderLista();
+    if (enCasa()) { nubeSetStockCampo(p, 'actual', v); if (v > ((datos.stock[p] && datos.stock[p].actual) || 0)) nubeSetStockCampo(p, 'max', v); return; }
+    const s = asegurar(p); if (v > (s.actual || 0)) s.max = v; s.actual = v; guardarDatos(); renderStock(); renderLista();
   }));
   cont.querySelectorAll('.stock-minimo').forEach(inp => inp.addEventListener('change', () => {
     const p = inp.dataset.prod, v = parseFloat(inp.value) || 0;
@@ -859,6 +869,7 @@ function ejecutarConfirmarCompra(aComprar) {
   for (const prod of aComprar) {
     if (datos.stock[prod] && datos.stock[prod].actual < datos.stock[prod].minimo) {
       datos.stock[prod].actual = datos.stock[prod].minimo;
+      datos.stock[prod].max = datos.stock[prod].minimo; // barra al 100% justo después de comprar
     }
   }
   seleccionados.clear();

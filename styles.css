@@ -37,7 +37,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
   color: var(--texto);
   background: transparent;
   padding-bottom: 96px;
@@ -81,7 +81,7 @@ header {
   border-radius: 0 0 24px 24px;
   box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent);
 }
-header h1 { font-size: 19px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+header h1 { font-size: 19px; font-weight: 700; display: flex; align-items: center; gap: 8px; letter-spacing: -0.1px; }
 
 /* Íconos dibujados: heredan el color y el tamaño del texto que acompañan */
 svg.ico {
@@ -117,7 +117,7 @@ main { padding: 16px; }
 .tab.active { display: block; }
 
 h2 { font-size: 18px; margin-bottom: 12px; }
-h3 { font-size: 14px; color: var(--gris-osc); margin: 20px 0 8px; text-transform: uppercase; letter-spacing: .3px; }
+h3 { font-size: 13.5px; font-weight: 800; color: var(--gris-osc); margin: 20px 0 8px; text-transform: uppercase; letter-spacing: 0.4px; }
 
 .field { margin-bottom: 14px; display: flex; flex-direction: column; }
 .field label {
@@ -155,12 +155,12 @@ h3 { font-size: 14px; color: var(--gris-osc); margin: 20px 0 8px; text-transform
 .card-producto .ico-lupa svg.ico { width: 22px; height: 22px; }
 .campo-producto { flex: 1; display: flex; flex-direction: column; min-width: 0; gap: 3px; }
 .campo-producto label {
-  font-size: 9px; font-weight: 700; letter-spacing: .7px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.6px;
   text-transform: uppercase; color: var(--gris-osc); margin: 0;
 }
 .campo-producto input {
   border: none; background: none; padding: 0; border-radius: 0;
-  font-size: 16.5px; color: var(--texto); width: 100%;
+  font-size: 16.5px; font-weight: 500; color: var(--texto); width: 100%;
 }
 .campo-producto input:focus { outline: none; }
 .card-producto .ico-mic {
@@ -183,11 +183,11 @@ h3 { font-size: 14px; color: var(--gris-osc); margin: 20px 0 8px; text-transform
   box-shadow: 0 3px 14px rgba(0, 0, 0, .05);
 }
 .subcard > label {
-  font-size: 9px; font-weight: 700; letter-spacing: .7px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.6px;
   text-transform: uppercase; color: var(--gris-osc); margin: 0;
 }
-.subcard-cantidad { flex: 1; min-width: 0; }
-.subcard-unidad { width: 128px; flex: none; }
+.subcard-cantidad { width: 118px; flex: none; }
+.subcard-unidad { flex: 1; min-width: 0; }
 .subcard-categoria { width: 100%; margin-top: 12px; }
 .cant-ctrl { display: flex; align-items: center; gap: 6px; }
 .cant-ctrl .step {
@@ -199,9 +199,24 @@ h3 { font-size: 14px; color: var(--gris-osc); margin: 20px 0 8px; text-transform
 .cant-ctrl input {
   flex: 1; min-width: 0; width: 100%;
   border: none; background: none; padding: 0; border-radius: 0;
-  text-align: center; font-size: 19px; font-weight: 700; color: var(--texto);
+  text-align: center; font-size: 22px; font-weight: 800; color: var(--texto);
+  font-variant-numeric: tabular-nums;
 }
 .cant-ctrl input:focus { outline: none; }
+
+/* Chips de unidad */
+.unidad-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+.u-chip {
+  padding: 5px 10px; border-radius: 20px;
+  border: 1.5px solid var(--borde); background: var(--bg);
+  font-size: 12px; font-weight: 700; color: var(--gris-osc);
+  cursor: pointer; transition: background .13s, border-color .13s, color .13s;
+  line-height: 1.4; letter-spacing: 0.1px;
+}
+.u-chip.activo {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+.u-chip:active { opacity: .8; }
 
 /* Dropdown propio para Unidad y Categoría (en vez del selector del sistema) */
 .cs { position: relative; }
@@ -239,7 +254,7 @@ h3 { font-size: 14px; color: var(--gris-osc); margin: 20px 0 8px; text-transform
 .cs-opcion.cs-agregar:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .subcard-categoria .cs-menu { right: 0; }
 
-.btn-agregar { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 16px; font-size: 16.5px; margin-top: 13px; }
+.btn-agregar { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 16px; font-size: 16.5px; font-weight: 800; margin-top: 13px; letter-spacing: -0.1px; }
 .btn-agregar svg.ico { width: 19px; height: 19px; }
 
 input, select {
@@ -265,7 +280,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   border: none;
   padding: 14px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 800;
   border-radius: 10px;
   margin-top: 8px;
   cursor: pointer;
