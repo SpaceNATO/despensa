@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = 'v30';
+const APP_VERSION = 'v31';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -682,15 +682,15 @@ function renderUltimos() {
       const num = parseFloat(val);
       if (!(num > 0)) { toast('Cantidad inválida'); return; }
       const diff = num - c.cantidad; // positivo = consumió más, stock baja más
+      c.cantidad = num;
       if (enCasa()) {
         nubeEditarConsumo(c.id, { cantidad: num });
-        if (datos.stock[c.producto] && diff !== 0) nubeIncrementarStock(c.producto, -diff);
+        if (diff !== 0) nubeIncrementarStock(c.producto, -diff);
         toast('Actualizado'); return;
       }
-      if (datos.stock[c.producto] && diff !== 0) {
+      if (diff !== 0 && datos.stock[c.producto]) {
         datos.stock[c.producto].actual = Math.max(0, (datos.stock[c.producto].actual || 0) - diff);
       }
-      c.cantidad = num;
       guardarDatos(); toast('Actualizado'); refrescarTodo();
     });
   }));
