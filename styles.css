@@ -468,6 +468,15 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 }
 .lista-items li.en-carrito { opacity: .6; }
 .lista-items li.en-carrito .nombre { text-decoration: line-through; }
+.btn-agregar-lista {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; padding: 12px 14px;
+  background: none; border: none; border-top: 1px solid var(--borde);
+  color: var(--accent); font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: 'Nunito', sans-serif;
+  touch-action: manipulation; letter-spacing: .2px;
+}
+.btn-agregar-lista:active { background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .iconbtn {
   background: none; border: none; cursor: pointer;
   font-size: 17px; flex: none; padding: 0 4px; color: var(--gris-osc);

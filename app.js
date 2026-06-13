@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = 'v34';
+const APP_VERSION = 'v35';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -886,8 +886,8 @@ function listaPendiente() {
 
 // El "carrito" (productos que ya pusiste en el changuito) se guarda para no perderlo.
 const seleccionados = new Set(datos.carrito);
-// Cantidades editadas en la lista de compras (persisten mientras la lista está abierta)
 const listaCantidades = new Map();
+let listaExtras = []; // ítems agregados manualmente (no vienen de consumos ni stock)
 
 function guardarCarrito() {
   if (enCasa()) { nubeSetCarrito([...seleccionados]); return; }
@@ -897,11 +897,13 @@ function guardarCarrito() {
 
 function renderLista() {
   const ul = document.getElementById('lista-compras');
-  const items = listaPendiente();
+  const pendientes = listaPendiente();
+  const items = [...pendientes, ...listaExtras.filter(e => !pendientes.find(p => p.producto === e.producto))];
   const acciones = ['btn-confirmar', 'btn-whatsapp', 'btn-copiar'];
   if (items.length === 0) {
     ul.innerHTML = '<li class="vacio">¡Lista vacía! No hay nada para reponer.</li>';
     acciones.forEach(id => document.getElementById(id).style.display = 'none');
+    actualizarProgreso();
     return;
   }
   acciones.forEach(id => document.getElementById(id).style.display = '');
@@ -994,15 +996,28 @@ function ejecutarConfirmarCompra(aComprar, cantidades) {
     datos.stock[prod].max = Math.max(datos.stock[prod].max || 0, nuevoActual);
   }
   seleccionados.clear();
+  listaExtras = listaExtras.filter(e => !aComprar.has(e.producto));
   datos.carrito = [];
   guardarDatos();
   toast('Compra confirmada');
   refrescarTodo();
 }
 
+addTap(document.getElementById('btn-agregar-lista'), () => {
+  abrirPrompt('¿Qué querés agregar?', '', (val) => {
+    const nombre = val.trim();
+    if (!nombre) return;
+    if (!listaExtras.find(e => e.producto === nombre) && !listaPendiente().find(p => p.producto === nombre)) {
+      listaExtras.push({ producto: nombre, unidad: 'u', cantidad: 1, stockBajo: false, categoria: '' });
+    }
+    renderLista();
+  });
+});
+
 document.getElementById('btn-confirmar').addEventListener('click', () => {
-  const items = listaPendiente();
-  const aComprar = seleccionados.size > 0 ? new Set(seleccionados) : new Set(items.map(i => i.producto));
+  const pendientes = listaPendiente();
+  const todosItems = [...pendientes, ...listaExtras.filter(e => !pendientes.find(p => p.producto === e.producto))];
+  const aComprar = seleccionados.size > 0 ? new Set(seleccionados) : new Set(todosItems.map(i => i.producto));
   if (aComprar.size === 0) return;
   const cantidades = {};
   items.forEach(it => {
