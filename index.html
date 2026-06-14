@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=52" />
+  <link rel="stylesheet" href="styles.css?v=53" />
 </head>
 <body>
   <header>
@@ -123,22 +123,39 @@
 
     <!-- ====== HISTORIAL ====== -->
     <section id="tab-historial" class="tab">
-      <div class="row">
-        <div class="field">
-          <label for="ver-por">Ver por</label>
-          <select id="ver-por">
-            <option value="categoria">Categoría</option>
-            <option value="producto">Producto</option>
-          </select>
+
+      <!-- Heatmap -->
+      <div class="hist-card">
+        <div class="hist-card-head">
+          <span class="hist-titulo">MAPA DE CONSUMO</span>
+          <span class="heat-legend">
+            <span class="heat-leg-txt">Poco</span>
+            <span class="heat-leg-bar"></span>
+            <span class="heat-leg-txt">Mucho</span>
+          </span>
         </div>
-        <div class="field">
-          <label for="filtro-historial">Buscar</label>
-          <input id="filtro-historial" placeholder="Filtrar..." />
-        </div>
+        <div id="hist-heatmap"></div>
       </div>
-      <canvas id="grafico-mes"></canvas>
-      <h3>Detalle por mes</h3>
-      <div id="tabla-historial"></div>
+
+      <!-- Selector de período -->
+      <div class="periodo-btns">
+        <button class="periodo-btn" data-p="1M">1M</button>
+        <button class="periodo-btn" data-p="3M">3M</button>
+        <button class="periodo-btn active" data-p="6M">6M</button>
+        <button class="periodo-btn" data-p="1A">1A</button>
+      </div>
+
+      <!-- Gráfico de líneas -->
+      <div class="hist-card">
+        <canvas id="grafico-mes"></canvas>
+        <div id="hist-leyenda" class="hist-leyenda"></div>
+      </div>
+
+      <!-- Totales por categoría -->
+      <div class="hist-card">
+        <div class="hist-titulo" style="margin-bottom:10px">TOTALES</div>
+        <div id="hist-totales"></div>
+      </div>
 
       <h3>Datos y respaldo</h3>
       <div class="acciones-datos">
@@ -363,6 +380,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=52"></script>
+  <script src="app.js?v=53"></script>
 </body>
 </html>

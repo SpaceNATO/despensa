@@ -673,16 +673,69 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .dato-icono { color: var(--azul); }
 .dato-icono svg.ico { width: 26px; height: 26px; }
 
-#tabla-historial { overflow-x: auto; }
-#tabla-historial table { width: 100%; border-collapse: collapse; font-size: 14px; }
-#tabla-historial th, #tabla-historial td {
-  border: 1px solid var(--borde); padding: 8px; text-align: left;
+/* ===== HISTORIAL ===== */
+.hist-card {
+  background: var(--bg-elev); border: .5px solid var(--borde);
+  border-radius: 16px; padding: 16px; margin-bottom: 12px; overflow: hidden;
 }
-#tabla-historial th { background: var(--gris); font-weight: 600; }
-#tabla-historial td.num { text-align: right; }
-#tabla-historial td.tend { text-align: center; font-weight: 700; }
-.tend.sube { color: var(--rojo); }
-.tend.baja { color: var(--verde); }
+.hist-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.hist-titulo { font-size: 11px; font-weight: 800; letter-spacing: .7px; text-transform: uppercase; color: var(--gris-osc); }
+.heat-legend { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--gris-osc); font-weight: 600; }
+.heat-leg-bar { width: 44px; height: 5px; border-radius: 3px; background: linear-gradient(to right, rgba(150,150,150,0.12), rgba(150,150,150,0.9)); }
+
+/* Heatmap */
+.heat-table { display: flex; flex-direction: column; gap: 3px; }
+.heat-row { display: flex; align-items: center; gap: 3px; }
+.heat-cat-cell {
+  width: 68px; min-width: 68px; font-size: 10.5px; font-weight: 600;
+  color: var(--gris-osc); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding-right: 4px;
+}
+.heat-header .heat-cat-cell { font-size: 0; }
+.heat-mes-cell { flex: 1; text-align: center; font-size: 9.5px; font-weight: 700; color: var(--gris-osc); letter-spacing: .2px; }
+.heat-cell {
+  flex: 1; text-align: center; font-size: 11px; font-weight: 700;
+  border-radius: 6px; padding: 4px 1px; min-height: 26px;
+  display: flex; align-items: center; justify-content: center; color: var(--texto);
+}
+.heat-total { margin-top: 4px; border-top: 1px solid var(--borde); padding-top: 4px; }
+.heat-total .heat-cat-cell { font-size: 9.5px; font-weight: 800; letter-spacing: .4px; color: var(--texto); }
+.heat-tot-num { font-size: 11px; font-weight: 700; color: var(--texto); }
+
+/* Period selector */
+.periodo-btns { display: flex; gap: 8px; margin-bottom: 12px; }
+.periodo-btn {
+  flex: 1; padding: 9px 0; border-radius: 12px;
+  border: 1.5px solid var(--borde); background: var(--bg-elev);
+  font-weight: 700; font-size: 13px; color: var(--gris-osc); cursor: pointer;
+}
+.periodo-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Line chart legend */
+.hist-leyenda { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; }
+.hist-ley-item { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; }
+.hist-ley-line { width: 20px; height: 3px; border-radius: 2px; flex: none; }
+
+/* Totals */
+.tot-cat { border-top: 1px solid var(--borde); }
+.tot-cat:first-child { border-top: none; }
+.tot-fila { display: flex; align-items: center; gap: 9px; padding: 12px 0; }
+.tot-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.tot-nombre { flex: 1; font-size: 15px; font-weight: 500; }
+.tot-total { font-size: 16px; font-weight: 700; }
+.tot-toggle {
+  width: 22px; height: 22px; border-radius: 50%; background: var(--gris);
+  border: none; font-size: 17px; font-weight: 400; line-height: 1;
+  color: var(--gris-osc); cursor: pointer; flex: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.tot-detalle { padding-bottom: 8px; }
+.tot-prod {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 0 6px 19px; font-size: 13.5px; color: var(--gris-osc);
+  border-top: 1px solid var(--borde);
+}
+.tot-num { font-weight: 600; color: var(--texto); }
 .tend.igual { color: var(--gris-osc); }
 
 canvas { margin: 12px 0; max-height: 320px; }

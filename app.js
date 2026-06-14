@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.52';
+const APP_VERSION = '0.53';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -1298,104 +1298,196 @@ document.getElementById('btn-whatsapp').addEventListener('click', async () => {
 
 // ===== HISTORIAL =====
 let grafico = null;
+let periodoHistorial = '6M';
+let expandidasHistorial = new Set();
+
+const MESES_CORTOS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 
 function mesClave(iso) {
   const d = new Date(iso);
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 }
 
-function etiquetaMes(m) {
-  const [a, mm] = m.split('-');
-  return new Date(a, mm - 1).toLocaleDateString('es-AR', { month: 'short', year: '2-digit' });
+function etiquetaMesCorto(m) {
+  return MESES_CORTOS[parseInt(m.split('-')[1]) - 1];
 }
 
-function datosHistorial(dimension, filtro) {
-  const mesesSet = new Set();
-  const series = {};
-  const f = (filtro || '').toLowerCase();
-  for (const c of datos.consumos) {
-    const clave = c[dimension];
-    if (f && !clave.toLowerCase().includes(f)) continue;
-    const mes = mesClave(c.fecha);
-    mesesSet.add(mes);
-    series[clave] = series[clave] || {};
-    series[clave][mes] = (series[clave][mes] || 0) + c.cantidad;
+function mesesEnPeriodo() {
+  const n = { '1M': 1, '3M': 3, '6M': 6, '1A': 12 }[periodoHistorial] || 6;
+  const now = new Date();
+  const result = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    result.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
   }
-  return { meses: [...mesesSet].sort(), series };
+  return result;
 }
 
-const PALETA = ['#2563eb', '#16a34a', '#dc2626', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d'];
-
-function paramsHistorial() {
-  return {
-    dim: document.getElementById('ver-por').value,
-    filtro: document.getElementById('filtro-historial').value.trim(),
-  };
+function consumosPeriodo() {
+  const meses = new Set(mesesEnPeriodo());
+  return datos.consumos.filter(c => meses.has(mesClave(c.fecha)));
 }
 
-function renderGrafico() {
-  const { dim, filtro } = paramsHistorial();
-  const { meses, series } = datosHistorial(dim, filtro);
-  const canvas = document.getElementById('grafico-mes');
-  if (meses.length === 0) {
-    if (grafico) { grafico.destroy(); grafico = null; }
-    canvas.style.display = 'none';
-    return;
-  }
-  canvas.style.display = '';
-  // La paleta arranca con el color de acento elegido por el usuario
-  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || PALETA[0];
-  const paleta = [accent, ...PALETA.filter(c => c.toLowerCase() !== accent.toLowerCase())];
-  const datasets = Object.keys(series).map((clave, i) => ({
-    label: clave,
-    data: meses.map(m => series[clave][m] || 0),
-    backgroundColor: paleta[i % paleta.length],
-  }));
-  if (grafico) grafico.destroy();
-  grafico = new Chart(canvas, {
-    type: 'bar',
-    data: { labels: meses.map(etiquetaMes), datasets },
-    options: {
-      responsive: true,
-      plugins: { legend: { position: 'bottom' } },
-      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
-    },
+function hexAlpha(hex, a) {
+  const m = /^#(..)(..)(..)$/.exec(hex);
+  if (!m) return hex;
+  return `rgba(${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)},${a.toFixed(2)})`;
+}
+
+function sortCats(lista) {
+  return lista.slice().sort((a, b) => {
+    const ia = CAT_ORDEN.indexOf(a), ib = CAT_ORDEN.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
   });
 }
 
-function renderTablaHistorial() {
-  const { dim, filtro } = paramsHistorial();
-  const { meses, series } = datosHistorial(dim, filtro);
-  const cont = document.getElementById('tabla-historial');
-  if (meses.length === 0) { cont.innerHTML = '<p class="vacio">Sin datos todavía.</p>'; return; }
-
-  const ultimo = meses[meses.length - 1];
-  const previo = meses.length >= 2 ? meses[meses.length - 2] : null;
-
-  let html = '<table><thead><tr><th>' + (dim === 'categoria' ? 'Categoría' : 'Producto') + '</th>';
-  html += meses.map(m => `<th>${etiquetaMes(m)}</th>`).join('');
-  html += '<th title="Último mes vs. anterior">Tend.</th></tr></thead><tbody>';
-  for (const clave of Object.keys(series).sort()) {
-    html += `<tr><td>${escapeHtml(clave)}</td>`;
-    html += meses.map(m => `<td class="num">${series[clave][m] ? fmtCant(series[clave][m]) : '–'}</td>`).join('');
-    // Tendencia: comparar último mes con el previo (feature 11)
-    let tend = '<td class="tend">–</td>';
-    if (previo) {
-      const a = series[clave][ultimo] || 0, b = series[clave][previo] || 0;
-      if (a > b) tend = '<td class="tend sube">▲</td>';
-      else if (a < b) tend = '<td class="tend baja">▼</td>';
-      else tend = '<td class="tend igual">=</td>';
-    }
-    html += tend + '</tr>';
+function renderHeatmap() {
+  const meses = mesesEnPeriodo();
+  const consumos = consumosPeriodo();
+  const matriz = {};
+  for (const c of consumos) {
+    const cat = c.categoria || 'Otros';
+    const mes = mesClave(c.fecha);
+    if (!matriz[cat]) matriz[cat] = {};
+    matriz[cat][mes] = (matriz[cat][mes] || 0) + c.cantidad;
   }
-  html += '</tbody></table>';
+  const cats = sortCats(Object.keys(matriz));
+  const cont = document.getElementById('hist-heatmap');
+  if (cats.length === 0) { cont.innerHTML = '<p class="vacio">Sin datos en este período.</p>'; return; }
+
+  let globalMax = 1;
+  for (const cat of cats)
+    for (const mes of meses)
+      globalMax = Math.max(globalMax, matriz[cat][mes] || 0);
+
+  let html = '<div class="heat-table">';
+  // Header row
+  html += '<div class="heat-row heat-header"><div class="heat-cat-cell"></div>';
+  for (const m of meses) html += `<div class="heat-mes-cell">${etiquetaMesCorto(m)}</div>`;
+  html += '</div>';
+  // Category rows
+  for (const cat of cats) {
+    const color = colorCategoria(cat);
+    const rowTotal = meses.reduce((s, m) => s + (matriz[cat][m] || 0), 0);
+    html += '<div class="heat-row">';
+    html += `<div class="heat-cat-cell" title="${escapeHtml(cat)}">${escapeHtml(cat)}</div>`;
+    for (const mes of meses) {
+      const val = matriz[cat][mes] || 0;
+      const alpha = val > 0 ? Math.max(0.13, val / globalMax) : 0;
+      const bg = val > 0 ? hexAlpha(color, alpha) : '';
+      html += `<div class="heat-cell"${bg ? ` style="background:${bg}"` : ''}>${val > 0 ? fmtCant(val) : ''}</div>`;
+    }
+    html += '</div>';
+  }
+  // Total row
+  html += '<div class="heat-row heat-total"><div class="heat-cat-cell">TOTAL</div>';
+  for (const mes of meses) {
+    const tot = cats.reduce((s, cat) => s + (matriz[cat][mes] || 0), 0);
+    html += `<div class="heat-mes-cell heat-tot-num">${tot > 0 ? fmtCant(tot) : ''}</div>`;
+  }
+  html += '</div></div>';
   cont.innerHTML = html;
 }
 
-function renderHistorial() { renderGrafico(); renderTablaHistorial(); }
+function renderLineaChart() {
+  const meses = mesesEnPeriodo();
+  const consumos = consumosPeriodo();
+  const series = {};
+  for (const c of consumos) {
+    const cat = c.categoria || 'Otros';
+    const mes = mesClave(c.fecha);
+    series[cat] = series[cat] || {};
+    series[cat][mes] = (series[cat][mes] || 0) + c.cantidad;
+  }
+  const cats = sortCats(Object.keys(series));
+  const canvas = document.getElementById('grafico-mes');
+  const leyenda = document.getElementById('hist-leyenda');
+  if (cats.length === 0) {
+    if (grafico) { grafico.destroy(); grafico = null; }
+    canvas.style.display = 'none'; leyenda.innerHTML = ''; return;
+  }
+  canvas.style.display = '';
+  const isDark = document.documentElement.classList.contains('dark');
+  const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+  const tickColor = isDark ? '#9ca3af' : '#6b7280';
+  const datasets = cats.map(cat => {
+    const color = colorCategoria(cat);
+    return {
+      label: cat,
+      data: meses.map(m => series[cat][m] || 0),
+      borderColor: color,
+      backgroundColor: hexAlpha(color, 0.08),
+      borderWidth: 2.5,
+      pointRadius: 4,
+      pointBackgroundColor: color,
+      pointBorderColor: isDark ? '#1f2937' : '#fff',
+      pointBorderWidth: 2,
+      tension: 0.35,
+      fill: false,
+    };
+  });
+  if (grafico) grafico.destroy();
+  grafico = new Chart(canvas, {
+    type: 'line',
+    data: { labels: meses.map(etiquetaMesCorto), datasets },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 11 } } },
+        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } } },
+      },
+    },
+  });
+  leyenda.innerHTML = cats.map(cat =>
+    `<span class="hist-ley-item"><span class="hist-ley-line" style="background:${colorCategoria(cat)}"></span>${escapeHtml(cat)}</span>`
+  ).join('');
+}
 
-document.getElementById('ver-por').addEventListener('change', renderHistorial);
-document.getElementById('filtro-historial').addEventListener('input', renderHistorial);
+function renderTotalesHistorial() {
+  const consumos = consumosPeriodo();
+  const cats = {};
+  for (const c of consumos) {
+    const cat = c.categoria || 'Otros';
+    if (!cats[cat]) cats[cat] = { total: 0, productos: {} };
+    cats[cat].total += c.cantidad;
+    cats[cat].productos[c.producto] = (cats[cat].productos[c.producto] || 0) + c.cantidad;
+  }
+  const catList = sortCats(Object.keys(cats));
+  const cont = document.getElementById('hist-totales');
+  if (catList.length === 0) { cont.innerHTML = '<p class="vacio">Sin datos en este período.</p>'; return; }
+  cont.innerHTML = catList.map(cat => {
+    const color = colorCategoria(cat);
+    const data = cats[cat];
+    const abierta = expandidasHistorial.has(cat);
+    const prodsHtml = abierta ? Object.entries(data.productos)
+      .sort((a, b) => b[1] - a[1])
+      .map(([prod, cnt]) => `<div class="tot-prod"><span>${escapeHtml(prod)}</span><span class="tot-num">${fmtCant(cnt)}</span></div>`)
+      .join('') : '';
+    return `<div class="tot-cat">
+      <div class="tot-fila">
+        <span class="tot-dot" style="background:${color}"></span>
+        <span class="tot-nombre">${escapeHtml(cat)}</span>
+        <span class="tot-total">${fmtCant(data.total)}</span>
+        <button class="tot-toggle${abierta ? ' abierta' : ''}" data-cat="${escapeHtml(cat)}">${abierta ? '−' : '−'}</button>
+      </div>
+      ${abierta ? `<div class="tot-detalle">${prodsHtml}</div>` : ''}
+    </div>`;
+  }).join('');
+  cont.querySelectorAll('.tot-toggle').forEach(btn => addTap(btn, () => {
+    const cat = btn.dataset.cat;
+    if (expandidasHistorial.has(cat)) expandidasHistorial.delete(cat); else expandidasHistorial.add(cat);
+    renderTotalesHistorial();
+  }));
+}
+
+function renderHistorial() { renderHeatmap(); renderLineaChart(); renderTotalesHistorial(); }
+
+document.querySelectorAll('.periodo-btn').forEach(btn => addTap(btn, () => {
+  periodoHistorial = btn.dataset.p;
+  document.querySelectorAll('.periodo-btn').forEach(b => b.classList.toggle('active', b === btn));
+  renderHistorial();
+}));
 
 // ===== EXPORTAR A EXCEL =====
 document.getElementById('btn-excel').addEventListener('click', () => {
@@ -2214,7 +2306,7 @@ function setTema(tema) {
   aplicarFondo(null);
   aplicarLetra(null);
   if (habiaPersonalizados) toast('Fondo y letra volvieron al automático del tema');
-  if (document.getElementById('tab-historial').classList.contains('active')) renderGrafico();
+  if (document.getElementById('tab-historial').classList.contains('active')) renderHistorial();
   if (ajustesOverlay.style.display !== 'none') renderAjustes();
 }
 btnTema.addEventListener('click', () => setTema(temaActual() === 'dark' ? 'light' : 'dark'));
