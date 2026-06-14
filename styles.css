@@ -586,7 +586,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   background: none; border: none; cursor: pointer;
   padding: 15px 16px; color: var(--texto);
 }
-.cat-dot { width: 11px; height: 11px; border-radius: 50%; background: var(--cat); flex: none; }
+.cat-dot { width: 11px; height: 11px; border-radius: 3px; background: var(--cat); flex: none; }
 .cat-nombre { font-weight: 700; font-size: 13px; letter-spacing: .5px; text-transform: uppercase; flex: 1; text-align: left; }
 .cat-meta { display: flex; align-items: center; gap: 11px; color: var(--gris-osc); font-size: 14px; }
 .cat-aviso { display: inline-flex; align-items: center; gap: 3px; color: var(--rojo); font-weight: 700; font-size: 12.5px; }
