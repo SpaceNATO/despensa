@@ -618,19 +618,29 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   color: var(--texto); display: inline-block;
 }
 .si-min {
-  flex: none; display: flex; flex-direction: column; align-items: center; gap: 1px;
-  font-size: 9px; font-weight: 700; letter-spacing: .5px; color: var(--gris-osc);
+  flex: none; display: flex; align-items: center; justify-content: center;
 }
 .stock-minimo {
   width: 38px; text-align: center; font-weight: 700; font-size: 14px;
   border: none !important; background: none; padding: 0 !important; color: var(--texto);
 }
 .stock-minimo:focus { outline: none; }
-.stock-item.bajo .si-min, .stock-item.cero .si-min,
 .stock-item.bajo .stock-minimo, .stock-item.cero .stock-minimo { color: var(--rojo); }
-.si-barra { height: 5px; border-radius: 3px; background: var(--gris); margin-top: 9px; overflow: hidden; }
-.si-barra span { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width .25s; }
-.stock-item.bajo .si-barra span, .stock-item.cero .si-barra span { background: var(--rojo); }
+.si-barra { position: relative; height: 5px; border-radius: 3px; background: var(--gris); margin-top: 9px; }
+.si-barra span:not(.si-min-mark) { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width .25s; }
+.stock-item.bajo .si-barra span:not(.si-min-mark), .stock-item.cero .si-barra span:not(.si-min-mark) { background: var(--rojo); }
+.si-min-mark {
+  position: absolute; top: 50%; transform: translate(-50%, -50%);
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--gris-osc); border: 2px solid var(--bg-elev);
+  pointer-events: none; z-index: 2;
+}
+.stock-item.bajo .si-min-mark, .stock-item.cero .si-min-mark { background: var(--rojo); }
+.cat-col-lbl {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+  color: var(--gris-osc); width: 42px; text-align: center;
+}
+.cat-col-lbl-min { width: 38px; }
 
 /* Tarjetas de Datos y respaldo */
 .acciones-datos { display: flex; gap: 10px; }

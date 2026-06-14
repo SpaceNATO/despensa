@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.49';
+const APP_VERSION = '0.50';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -805,6 +805,7 @@ function renderStock() {
       const bajo = st.minimo > 0 && st.actual > 0 && st.actual < st.minimo;
       if (st.minimo > 0 && st.actual < st.minimo) { porReponer++; urgentes.push({ producto: n, categoria: c, cero }); }
       const pct = Math.round(Math.min(1, (st.actual || 0) / refStock(st)) * 100);
+      const minPct = st.minimo > 0 ? Math.round(Math.min(1, st.minimo / refStock(st)) * 100) : -1;
       const estado = cero ? 'cero' : (bajo ? 'bajo' : 'ok');
       const badge = cero ? '<span class="si-badge cero">SIN STOCK</span>' : (bajo ? '<span class="si-badge">REPONER</span>' : '');
       return `
@@ -814,9 +815,9 @@ function renderStock() {
             <div class="si-ctrl">
               <span class="stock-actual-val">${fmtCant(st.actual)}</span>
             </div>
-            <label class="si-min">MÍN<input class="stock-minimo" type="number" step="any" inputmode="decimal" data-prod="${escapeHtml(n)}" value="${st.minimo}" /></label>
+            <label class="si-min"><input class="stock-minimo" type="number" step="any" inputmode="decimal" aria-label="Mínimo" data-prod="${escapeHtml(n)}" value="${st.minimo}" /></label>
           </div>
-          <div class="si-barra"><span style="width:${pct}%"></span></div>
+          <div class="si-barra"><span style="width:${pct}%"></span>${minPct >= 0 ? `<span class="si-min-mark" style="left:${minPct}%"></span>` : ''}</div>
         </div>`;
     }).join('');
     const colap = colapsadas.has(c);
@@ -827,7 +828,8 @@ function renderStock() {
           <span class="cat-nombre">${escapeHtml(c)}</span>
           <span class="cat-meta">
             ${porReponer > 0 ? `<span class="cat-aviso">${icono('bajando')} ${porReponer}</span>` : ''}
-            <span class="cat-count">${grupos[c].length}</span>
+            <span class="cat-col-lbl">STOCK</span>
+            <span class="cat-col-lbl cat-col-lbl-min">MÍN</span>
             <svg class="cat-flecha" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </span>
         </button>
