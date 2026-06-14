@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.47';
+const APP_VERSION = '0.48';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -997,7 +997,7 @@ function renderLista() {
           listaExtras = listaExtras.map(e => e.producto === prod ? { ...e, producto: nombre } : e);
           guardarExtrasLocal();
         }
-        renderLista();
+        refrescarTodo();
       },
       () => {
         listaExtras = listaExtras.filter(e => e.producto !== prod);
@@ -1937,7 +1937,7 @@ function renderDatosPanel() {
     const csC = crearDropdown(selC, { colorDot: true });
     csC.classList.add('datos-cs-c');
 
-    const guardar = () => propagarInfoProducto(inp.dataset.original, selU.value, selC.value);
+    const guardar = () => { propagarInfoProducto(inp.dataset.original, selU.value, selC.value); refrescarTodo(); };
     selU.addEventListener('change', guardar);
     selC.addEventListener('change', guardar);
   });
