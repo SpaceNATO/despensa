@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.50';
+const APP_VERSION = '0.51';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -812,10 +812,11 @@ function renderStock() {
         <div class="stock-item ${estado}">
           <div class="si-top">
             <div class="si-info"><div class="si-nombre">${escapeHtml(n)} <small>${escapeHtml(cat[n].unidad)}</small> ${badge}</div></div>
-            <div class="si-ctrl">
+            <div class="si-cols">
               <span class="stock-actual-val">${fmtCant(st.actual)}</span>
+              <span class="col-sep"></span>
+              <label class="si-min"><input class="stock-minimo" type="number" step="any" inputmode="decimal" aria-label="Mínimo" data-prod="${escapeHtml(n)}" value="${st.minimo}" /></label>
             </div>
-            <label class="si-min"><input class="stock-minimo" type="number" step="any" inputmode="decimal" aria-label="Mínimo" data-prod="${escapeHtml(n)}" value="${st.minimo}" /></label>
           </div>
           <div class="si-barra"><span style="width:${pct}%"></span>${minPct >= 0 ? `<span class="si-min-mark" style="left:${minPct}%"></span>` : ''}</div>
         </div>`;
@@ -828,8 +829,11 @@ function renderStock() {
           <span class="cat-nombre">${escapeHtml(c)}</span>
           <span class="cat-meta">
             ${porReponer > 0 ? `<span class="cat-aviso">${icono('bajando')} ${porReponer}</span>` : ''}
-            <span class="cat-col-lbl">STOCK</span>
-            <span class="cat-col-lbl cat-col-lbl-min">MÍN</span>
+            <span class="si-cols">
+              <span class="cat-col-lbl">STOCK</span>
+              <span class="col-sep"></span>
+              <span class="cat-col-lbl">MÍN</span>
+            </span>
             <svg class="cat-flecha" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </span>
         </button>

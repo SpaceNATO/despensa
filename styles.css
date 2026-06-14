@@ -614,15 +614,24 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   font-size: 19px; line-height: 1;
 }
 .stock-actual-val {
-  width: 42px; text-align: center; font-weight: 700; font-size: 16px;
+  width: 44px; text-align: center; font-weight: 700; font-size: 16px;
   color: var(--texto); display: inline-block;
 }
+.si-cols {
+  display: flex; align-items: center; flex: none;
+}
+.si-top .si-cols {
+  margin-right: 22px; /* offset = cat-flecha(11px) + cat-meta gap(11px) */
+}
+.col-sep {
+  width: 1px; height: 16px; background: var(--borde); flex: none; margin: 0 5px;
+}
 .si-min {
-  flex: none; display: flex; align-items: center; justify-content: center;
+  width: 44px; flex: none; display: flex; align-items: center; justify-content: center;
 }
 .stock-minimo {
-  width: 38px; text-align: center; font-weight: 700; font-size: 14px;
-  border: none !important; background: none; padding: 0 !important; color: var(--texto);
+  width: 40px; text-align: center; font-weight: 600; font-size: 14px;
+  border: none !important; background: none; padding: 0 !important; color: var(--gris-osc);
 }
 .stock-minimo:focus { outline: none; }
 .stock-item.bajo .stock-minimo, .stock-item.cero .stock-minimo { color: var(--rojo); }
@@ -638,9 +647,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .stock-item.bajo .si-min-mark, .stock-item.cero .si-min-mark { background: var(--rojo); }
 .cat-col-lbl {
   font-size: 9.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
-  color: var(--gris-osc); width: 42px; text-align: center;
+  color: var(--gris-osc); width: 44px; text-align: center;
 }
-.cat-col-lbl-min { width: 38px; }
 
 /* Tarjetas de Datos y respaldo */
 .acciones-datos { display: flex; gap: 10px; }
