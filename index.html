@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=54" />
+  <link rel="stylesheet" href="styles.css?v=55" />
 </head>
 <body>
   <header>
@@ -119,6 +119,7 @@
       <button id="stock-alerta" class="stock-alerta" type="button" hidden></button>
       <div id="stock-urgentes" class="stock-urgentes" hidden></div>
       <div id="lista-stock" class="stock-cats"></div>
+      <button id="btn-agregar-stock" type="button" class="btn-agregar-lista" style="margin-top:10px">+ Agregar producto</button>
     </section>
 
     <!-- ====== HISTORIAL ====== -->
@@ -300,6 +301,20 @@
           <input id="lista-item-nombre" type="text" class="modal-prompt-input" placeholder="Nombre del producto" autocomplete="off" style="display:block;margin:0" />
           <div id="lista-item-sugerencias" class="sugerencias" hidden></div>
         </div>
+        <div class="lista-item-row" id="lista-item-cant-row" style="display:none">
+          <div class="lista-item-campo lista-item-campo-cat">
+            <label>Cantidad</label>
+            <div class="li-cant li-cant-modal">
+              <button type="button" id="lista-item-cant-menos" class="li-step">−</button>
+              <div class="li-num-wrap">
+                <input id="lista-item-cantidad" type="number" inputmode="decimal" class="li-num-inp" value="1" readonly />
+                <span class="li-num" id="lista-item-cant-display">1</span>
+                <span class="li-unidad" id="lista-item-cant-unidad">u</span>
+              </div>
+              <button type="button" id="lista-item-cant-mas" class="li-step">+</button>
+            </div>
+          </div>
+        </div>
         <div class="lista-item-row">
           <div class="lista-item-campo">
             <label>Unidad</label>
@@ -383,6 +398,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=54"></script>
+  <script src="app.js?v=55"></script>
 </body>
 </html>

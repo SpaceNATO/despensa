@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.54';
+const APP_VERSION = '0.55';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -134,7 +134,7 @@ function escucharCasa() {
   }, avisarErrorNube));
   casaUnsub.push(ref.collection('stock').onSnapshot(snap => {
     const s = {};
-    snap.docs.forEach(d => { const v = d.data(); s[v.producto] = { actual: Math.max(0, v.actual || 0), minimo: v.minimo || 0, max: v.max || 0 }; });
+    snap.docs.forEach(d => { const v = d.data(); s[v.producto] = { actual: Math.max(0, v.actual || 0), minimo: v.minimo || 0, max: v.max || 0, ...(v.unidad && { unidad: v.unidad }), ...(v.categoria && { categoria: v.categoria }) }; });
     nubeStock = s; recomponerDesdeNube();
   }, avisarErrorNube));
   casaUnsub.push(ref.collection('meta').doc('estado').onSnapshot(d => {
@@ -776,6 +776,10 @@ function refStock(st) { return Math.max(st.max || 0, st.minimo || 0, 1); }
 function renderStock() {
   const cont = document.getElementById('lista-stock');
   const cat = catalogo();
+  // También mostrar productos cargados manualmente (sin consumos registrados)
+  for (const [prod, st] of Object.entries(datos.stock)) {
+    if (!cat[prod] && st.unidad) cat[prod] = { unidad: st.unidad, categoria: st.categoria || 'Otros' };
+  }
   const nombres = Object.keys(cat);
   const alerta = document.getElementById('stock-alerta');
   const urg = document.getElementById('stock-urgentes');
@@ -960,7 +964,8 @@ function renderLista() {
         <span class="nombre">${escapeHtml(it.producto)}<div class="fecha">${detalle}</div></span>
         <div class="li-cant">
           <button class="li-step" data-prod="${escapeHtml(it.producto)}" data-dir="-1">−</button>
-          <div class="li-num-wrap">
+          <div class="li-num-wrap" data-prod="${escapeHtml(it.producto)}">
+            <input class="li-num-inp" type="number" inputmode="decimal" data-prod="${escapeHtml(it.producto)}" value="${cantVal}" readonly tabindex="-1" style="position:absolute;opacity:0;pointer-events:none;width:1px" />
             <span class="li-num">${fmtCant(cantVal)}</span>
             <span class="li-unidad">${escapeHtml(it.unidad)}</span>
           </div>
@@ -976,8 +981,24 @@ function renderLista() {
     const nuevo = Math.max(1, Math.round((cur + dir) * 100) / 100);
     listaCantidades.set(prod, nuevo);
     guardarCantidadesLocal();
-    btn.closest('.li-cant').querySelector('.li-num').textContent = fmtCant(nuevo);
+    const wrap = btn.closest('.li-cant').querySelector('.li-num-wrap');
+    wrap.querySelector('.li-num').textContent = fmtCant(nuevo);
+    wrap.querySelector('.li-num-inp').value = nuevo;
   }));
+  ul.querySelectorAll('.li-num-wrap').forEach(wrap => {
+    const inp = wrap.querySelector('.li-num-inp');
+    const prod = wrap.dataset.prod;
+    addTap(wrap, () => {
+      abrirNumpad(inp);
+    });
+    inp.addEventListener('change', () => {
+      const v = Math.max(0.01, parseFloat(inp.value) || 1);
+      listaCantidades.set(prod, v);
+      guardarCantidadesLocal();
+      wrap.querySelector('.li-num').textContent = fmtCant(v);
+      inp.value = v;
+    });
+  });
   ul.querySelectorAll('input[type=checkbox]').forEach(chk => chk.addEventListener('change', () => {
     if (chk.checked) seleccionados.add(chk.dataset.prod); else seleccionados.delete(chk.dataset.prod);
     chk.closest('li').classList.toggle('en-carrito', chk.checked);
@@ -990,8 +1011,8 @@ function renderLista() {
     const pendiente = listaPendiente().find(p => p.producto === prod);
     const extra = listaExtras.find(e => e.producto === prod);
     const item = pendiente || extra || { producto: prod, unidad: 'u', categoria: '' };
-    abrirListaItemModal({ nombre: item.producto, unidad: item.unidad, categoria: item.categoria }, true,
-      (nombre, unidad, categoria) => {
+    abrirListaItemModal({ nombre: item.producto, unidad: item.unidad, categoria: item.categoria, cantidad: listaCantidades.get(prod) || 1 }, true,
+      (nombre, unidad, categoria, cantidad) => {
         if (extra) {
           extra.nombre = nombre;
           extra.unidad = unidad;
@@ -1003,6 +1024,7 @@ function renderLista() {
           listaExtras = listaExtras.map(e => e.producto === prod ? { ...e, producto: nombre } : e);
           guardarExtrasLocal();
         }
+        if (cantidad !== null) { listaCantidades.set(nombre, cantidad); guardarCantidadesLocal(); }
         refrescarTodo();
       },
       () => {
@@ -1167,7 +1189,7 @@ function cerrarListaItemModal() {
   listaItemNombreEl.onblur = null;
 }
 
-function abrirListaItemModal({ nombre = '', unidad = 'u', categoria = 'Almacén' } = {}, isEdit, onGuardar, onEliminar) {
+function abrirListaItemModal({ nombre = '', unidad = 'u', categoria = 'Almacén', cantidad = 1, mostrarCantidad = false } = {}, isEdit, onGuardar, onEliminar) {
   document.getElementById('lista-item-titulo').textContent = isEdit ? 'Editar ítem' : 'Agregar ítem';
   poblarSelectsListaItem();
   listaItemNombreEl.value = nombre;
@@ -1176,6 +1198,18 @@ function abrirListaItemModal({ nombre = '', unidad = 'u', categoria = 'Almacén'
   listaItemCategoriaEl.value = categoria;
   listaItemCategoriaEl.dispatchEvent(new Event('change'));
   listaItemEliminarBtn.style.display = isEdit ? '' : 'none';
+
+  const _cantRow = document.getElementById('lista-item-cant-row');
+  const _cantInp = document.getElementById('lista-item-cantidad');
+  const _cantDisplay = document.getElementById('lista-item-cant-display');
+  const _cantUnidad = document.getElementById('lista-item-cant-unidad');
+  const _mostrarCant = isEdit || mostrarCantidad;
+  _cantRow.style.display = _mostrarCant ? '' : 'none';
+  if (_mostrarCant) {
+    _cantInp.value = cantidad;
+    _cantDisplay.textContent = fmtCant(cantidad);
+    _cantUnidad.textContent = unidad;
+  }
 
   if (!isEdit) {
     listaItemNombreEl.oninput = () => {
@@ -1194,8 +1228,9 @@ function abrirListaItemModal({ nombre = '', unidad = 'u', categoria = 'Almacén'
   const guardarFn = () => {
     const nom = listaItemNombreEl.value.trim();
     if (!nom) { toast('Escribí un nombre'); return; }
+    const _cantFinal = _mostrarCant ? Math.max(0.01, parseFloat(_cantInp.value) || 1) : null;
     cerrarListaItemModal();
-    onGuardar(nom, listaItemUnidadEl.value, listaItemCategoriaEl.value);
+    onGuardar(nom, listaItemUnidadEl.value, listaItemCategoriaEl.value, _cantFinal);
   };
   listaItemGuardarBtn.onclick = guardarFn;
   listaItemNombreEl.onkeydown = (e) => {
@@ -1227,6 +1262,45 @@ addTap(document.getElementById('btn-agregar-lista'), () => {
     listaExtras.push({ producto: nombre, unidad, categoria, cantidad: 1, stockBajo: false });
     guardarExtrasLocal();
     propagarInfoProducto(nombre, unidad, categoria);
+    renderLista();
+  });
+});
+
+// Setup único de la fila de cantidad del modal (no se duplican listeners)
+(function() {
+  const inp = document.getElementById('lista-item-cantidad');
+  const display = document.getElementById('lista-item-cant-display');
+  const unidadEl = document.getElementById('lista-item-cant-unidad');
+  document.getElementById('lista-item-cant-menos').onclick = () => {
+    const v = Math.max(0.01, Math.round((parseFloat(inp.value) - 1) * 100) / 100);
+    inp.value = v; display.textContent = fmtCant(v);
+  };
+  document.getElementById('lista-item-cant-mas').onclick = () => {
+    const v = Math.round((parseFloat(inp.value) + 1) * 100) / 100;
+    inp.value = v; display.textContent = fmtCant(v);
+  };
+  addTap(document.querySelector('#lista-item-cant-row .li-num-wrap'), () => abrirNumpad(inp));
+  inp.addEventListener('change', () => {
+    const v = Math.max(0.01, parseFloat(inp.value) || 1);
+    inp.value = v; display.textContent = fmtCant(v);
+  });
+  listaItemUnidadEl.addEventListener('change', () => { unidadEl.textContent = listaItemUnidadEl.value; });
+})();
+
+addTap(document.getElementById('btn-agregar-stock'), () => {
+  abrirListaItemModal({ mostrarCantidad: true }, false, (nombre, unidad, categoria, cantidad) => {
+    const cant = cantidad || 1;
+    if (enCasa()) {
+      casaRef().collection('stock').doc(idStock(nombre)).set(
+        { producto: nombre, actual: cant, minimo: 0, max: cant, unidad, categoria },
+        { merge: true }
+      ).catch(avisarErrorNube);
+      return; // el listener onSnapshot actualiza datos y refresca
+    }
+    if (!datos.stock[nombre]) datos.stock[nombre] = {};
+    Object.assign(datos.stock[nombre], { actual: cant, minimo: 0, max: cant, unidad, categoria });
+    guardarDatos();
+    renderStock();
     renderLista();
   });
 });
@@ -1425,10 +1499,11 @@ function mostrarDetalleHeatmap(cat, mes) {
     .map(g => `<span class="heat-det-item"><span class="heat-det-cant">${fmtCant(g.cantidad)} ${escapeHtml(g.unidad)}</span> · ${escapeHtml(g.producto)}</span>`)
     .join('');
 
+  el.style.borderColor = color;
   el.innerHTML = `
     <div class="heat-det-head">
       <span class="heat-det-dot" style="background:${color}"></span>
-      <span class="heat-det-titulo">${escapeHtml(cat)} · ${mesNom}: <strong class="heat-det-count">${items.length} ítem${items.length !== 1 ? 's' : ''}</strong></span>
+      <span class="heat-det-titulo">${escapeHtml(cat)} · ${mesNom}: <strong class="heat-det-count" style="color:${color}">${items.length} ítem${items.length !== 1 ? 's' : ''}</strong></span>
     </div>
     <div class="heat-det-lista">${lista}</div>`;
   el.hidden = false;

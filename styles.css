@@ -432,8 +432,11 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .li-step:active { background: color-mix(in srgb, var(--accent) 28%, transparent); }
 .li-num-wrap {
   display: flex; flex-direction: column; align-items: center; gap: 0;
-  min-width: 28px;
+  min-width: 28px; cursor: pointer;
 }
+.li-cant-modal .li-num-wrap { min-width: 48px; }
+.li-cant-modal .li-num { font-size: 20px; }
+.li-cant-modal .li-unidad { font-size: 11px; }
 .li-num {
   text-align: center; font-size: 15px; font-weight: 700;
   font-family: 'Sora', sans-serif; font-variant-numeric: tabular-nums;
