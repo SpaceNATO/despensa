@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.53';
+const APP_VERSION = '0.54';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -1300,6 +1300,7 @@ document.getElementById('btn-whatsapp').addEventListener('click', async () => {
 let grafico = null;
 let periodoHistorial = '6M';
 let expandidasHistorial = new Set();
+let heatSeleccionada = null; // { cat, mes }
 
 const MESES_CORTOS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 
@@ -1345,11 +1346,12 @@ function renderHeatmap() {
   const meses = mesesEnPeriodo();
   const consumos = consumosPeriodo();
   const matriz = {};
+  // Contar eventos (no sumar cantidades) para evitar mezcla de unidades
   for (const c of consumos) {
     const cat = c.categoria || 'Otros';
     const mes = mesClave(c.fecha);
     if (!matriz[cat]) matriz[cat] = {};
-    matriz[cat][mes] = (matriz[cat][mes] || 0) + c.cantidad;
+    matriz[cat][mes] = (matriz[cat][mes] || 0) + 1;
   }
   const cats = sortCats(Object.keys(matriz));
   const cont = document.getElementById('hist-heatmap');
@@ -1361,32 +1363,75 @@ function renderHeatmap() {
       globalMax = Math.max(globalMax, matriz[cat][mes] || 0);
 
   let html = '<div class="heat-table">';
-  // Header row
   html += '<div class="heat-row heat-header"><div class="heat-cat-cell"></div>';
   for (const m of meses) html += `<div class="heat-mes-cell">${etiquetaMesCorto(m)}</div>`;
   html += '</div>';
-  // Category rows
   for (const cat of cats) {
     const color = colorCategoria(cat);
-    const rowTotal = meses.reduce((s, m) => s + (matriz[cat][m] || 0), 0);
     html += '<div class="heat-row">';
     html += `<div class="heat-cat-cell" title="${escapeHtml(cat)}">${escapeHtml(cat)}</div>`;
     for (const mes of meses) {
       const val = matriz[cat][mes] || 0;
       const alpha = val > 0 ? Math.max(0.13, val / globalMax) : 0;
       const bg = val > 0 ? hexAlpha(color, alpha) : '';
-      html += `<div class="heat-cell"${bg ? ` style="background:${bg}"` : ''}>${val > 0 ? fmtCant(val) : ''}</div>`;
+      const sel = heatSeleccionada && heatSeleccionada.cat === cat && heatSeleccionada.mes === mes;
+      html += `<div class="heat-cell${val > 0 ? ' clickable' : ''}${sel ? ' seleccionada' : ''}" data-cat="${escapeHtml(cat)}" data-mes="${mes}"${bg ? ` style="background:${bg}"` : ''}>${val > 0 ? val : ''}</div>`;
     }
     html += '</div>';
   }
-  // Total row
   html += '<div class="heat-row heat-total"><div class="heat-cat-cell">TOTAL</div>';
   for (const mes of meses) {
-    const tot = cats.reduce((s, cat) => s + (matriz[cat][mes] || 0), 0);
-    html += `<div class="heat-mes-cell heat-tot-num">${tot > 0 ? fmtCant(tot) : ''}</div>`;
+    const tot = cats.reduce((s, c) => s + (matriz[c][mes] || 0), 0);
+    html += `<div class="heat-mes-cell heat-tot-num">${tot > 0 ? tot : ''}</div>`;
   }
   html += '</div></div>';
   cont.innerHTML = html;
+
+  cont.querySelectorAll('.heat-cell.clickable').forEach(cell => {
+    addTap(cell, () => {
+      const cat = cell.dataset.cat, mes = cell.dataset.mes;
+      const esMisma = heatSeleccionada && heatSeleccionada.cat === cat && heatSeleccionada.mes === mes;
+      cont.querySelectorAll('.heat-cell.seleccionada').forEach(c => c.classList.remove('seleccionada'));
+      if (esMisma) {
+        heatSeleccionada = null;
+        document.getElementById('heat-detalle').hidden = true;
+      } else {
+        heatSeleccionada = { cat, mes };
+        cell.classList.add('seleccionada');
+        mostrarDetalleHeatmap(cat, mes);
+      }
+    });
+  });
+}
+
+const MESES_MIN = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+function mostrarDetalleHeatmap(cat, mes) {
+  const color = colorCategoria(cat);
+  const mesNom = MESES_MIN[parseInt(mes.split('-')[1]) - 1];
+  const items = consumosPeriodo().filter(c => (c.categoria || 'Otros') === cat && mesClave(c.fecha) === mes);
+  const el = document.getElementById('heat-detalle');
+  if (!items.length) { el.hidden = true; return; }
+
+  // Agrupar por producto+unidad y sumar cantidades reales
+  const grupos = {};
+  for (const c of items) {
+    const k = c.producto + '|||' + c.unidad;
+    if (!grupos[k]) grupos[k] = { producto: c.producto, unidad: c.unidad, cantidad: 0 };
+    grupos[k].cantidad += c.cantidad;
+  }
+  const lista = Object.values(grupos)
+    .sort((a, b) => a.producto.localeCompare(b.producto))
+    .map(g => `<span class="heat-det-item"><span class="heat-det-cant">${fmtCant(g.cantidad)} ${escapeHtml(g.unidad)}</span> · ${escapeHtml(g.producto)}</span>`)
+    .join('');
+
+  el.innerHTML = `
+    <div class="heat-det-head">
+      <span class="heat-det-dot" style="background:${color}"></span>
+      <span class="heat-det-titulo">${escapeHtml(cat)} · ${mesNom}: <strong class="heat-det-count">${items.length} ítem${items.length !== 1 ? 's' : ''}</strong></span>
+    </div>
+    <div class="heat-det-lista">${lista}</div>`;
+  el.hidden = false;
 }
 
 function renderLineaChart() {
@@ -1397,7 +1442,7 @@ function renderLineaChart() {
     const cat = c.categoria || 'Otros';
     const mes = mesClave(c.fecha);
     series[cat] = series[cat] || {};
-    series[cat][mes] = (series[cat][mes] || 0) + c.cantidad;
+    series[cat][mes] = (series[cat][mes] || 0) + 1;
   }
   const cats = sortCats(Object.keys(series));
   const canvas = document.getElementById('grafico-mes');
@@ -1450,8 +1495,11 @@ function renderTotalesHistorial() {
   for (const c of consumos) {
     const cat = c.categoria || 'Otros';
     if (!cats[cat]) cats[cat] = { total: 0, productos: {} };
-    cats[cat].total += c.cantidad;
-    cats[cat].productos[c.producto] = (cats[cat].productos[c.producto] || 0) + c.cantidad;
+    cats[cat].total += 1;
+    // productos: agrupar cantidad real por producto+unidad para el desglose expandido
+    const pk = c.producto + '|||' + c.unidad;
+    if (!cats[cat].productos[pk]) cats[cat].productos[pk] = { producto: c.producto, unidad: c.unidad, cantidad: 0 };
+    cats[cat].productos[pk].cantidad += c.cantidad;
   }
   const catList = sortCats(Object.keys(cats));
   const cont = document.getElementById('hist-totales');
@@ -1460,9 +1508,9 @@ function renderTotalesHistorial() {
     const color = colorCategoria(cat);
     const data = cats[cat];
     const abierta = expandidasHistorial.has(cat);
-    const prodsHtml = abierta ? Object.entries(data.productos)
-      .sort((a, b) => b[1] - a[1])
-      .map(([prod, cnt]) => `<div class="tot-prod"><span>${escapeHtml(prod)}</span><span class="tot-num">${fmtCant(cnt)}</span></div>`)
+    const prodsHtml = abierta ? Object.values(data.productos)
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .map(p => `<div class="tot-prod"><span>${escapeHtml(p.producto)}</span><span class="tot-num">${fmtCant(p.cantidad)} ${escapeHtml(p.unidad)}</span></div>`)
       .join('') : '';
     return `<div class="tot-cat">
       <div class="tot-fila">
@@ -1485,6 +1533,8 @@ function renderHistorial() { renderHeatmap(); renderLineaChart(); renderTotalesH
 
 document.querySelectorAll('.periodo-btn').forEach(btn => addTap(btn, () => {
   periodoHistorial = btn.dataset.p;
+  heatSeleccionada = null;
+  document.getElementById('heat-detalle').hidden = true;
   document.querySelectorAll('.periodo-btn').forEach(b => b.classList.toggle('active', b === btn));
   renderHistorial();
 }));
