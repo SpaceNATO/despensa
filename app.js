@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.58';
+const APP_VERSION = '0.59';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -1304,14 +1304,21 @@ addTap(document.getElementById('btn-agregar-stock'), () => {
   abrirListaItemModal({ mostrarCantidad: true }, false, (nombre, unidad, categoria, cantidad) => {
     const cant = cantidad || 1;
     if (enCasa()) {
+      const stActual = datos.stock[nombre] || {};
+      const nuevoActual = (stActual.actual || 0) + cant;
+      const nuevoMax = Math.max(stActual.max || 0, nuevoActual);
       casaRef().collection('stock').doc(idStock(nombre)).set(
-        { producto: nombre, actual: cant, minimo: 0, max: cant, unidad, categoria },
+        { producto: nombre, actual: fv().increment(cant), max: nuevoMax, ...(unidad && { unidad }), ...(categoria && { categoria }) },
         { merge: true }
       ).catch(avisarErrorNube);
       return; // el listener onSnapshot actualiza datos y refresca
     }
-    if (!datos.stock[nombre]) datos.stock[nombre] = {};
-    Object.assign(datos.stock[nombre], { actual: cant, minimo: 0, max: cant, unidad, categoria });
+    if (!datos.stock[nombre]) datos.stock[nombre] = { actual: 0, minimo: 0, max: 0 };
+    const st = datos.stock[nombre];
+    st.actual = (st.actual || 0) + cant;
+    st.max = Math.max(st.max || 0, st.actual);
+    if (unidad) st.unidad = unidad;
+    if (categoria) st.categoria = categoria;
     guardarDatos();
     renderStock();
     renderLista();
