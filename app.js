@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.60';
+const APP_VERSION = '0.61';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -2214,11 +2214,6 @@ function renderDatosPanel() {
       inp.dataset.original = nuevo;
     };
     inp.addEventListener('blur', _guardarNombre);
-    if (isTouchDevice) {
-      inp.setAttribute('readonly', '');
-      addTap(inp, () => abrirQwerty(inp));
-      inp.addEventListener('input', _guardarNombre);
-    }
     fila.appendChild(inp);
 
     const selU = document.createElement('select');
@@ -2436,8 +2431,7 @@ function abrirConfigCat(nombre, onGuardar) {
   inp.value = nombre;
   document.getElementById('cat-config-dot').style.background = _catConfigColor;
   document.getElementById('cat-config-overlay').style.display = 'flex';
-  if (isTouchDevice) { setTimeout(() => abrirQwerty(inp), 80); }
-  else { setTimeout(() => inp.focus(), 60); }
+  setTimeout(() => inp.focus(), 60);
 }
 
 document.getElementById('cat-config-color-btn').addEventListener('click', () => {
@@ -2823,8 +2817,4 @@ document.getElementById('qwerty-overlay').addEventListener('click', (e) => {
   if (e.target === document.getElementById('qwerty-overlay') && Date.now() - _qwertyOpenAt > 350) cerrarQwerty();
 });
 
-// Interceptar el campo Producto en dispositivos táctiles
-if (isTouchDevice) {
-  inputProducto.setAttribute('readonly', '');
-  inputProducto.addEventListener('touchend', (e) => { e.preventDefault(); abrirQwerty(inputProducto); }, { passive: false });
-}
+// QWERTY de la app deshabilitado: el campo Producto usa el teclado nativo del celular
