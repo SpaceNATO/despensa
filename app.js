@@ -497,6 +497,9 @@ function guardarCategoriaPropia(nombre) {
 // Overrides para renombrar ítems predeterminados
 function catOverrides() { try { return JSON.parse(localStorage.getItem('despensa_cat_ov') || '{}'); } catch { return {}; } }
 function unidOverrides() { try { return JSON.parse(localStorage.getItem('despensa_unid_ov') || '{}'); } catch { return {}; } }
+function catColorOverrides() { try { return JSON.parse(localStorage.getItem('despensa_cat_color_ov') || '{}'); } catch { return {}; } }
+function guardarCatColorOverride(cat, color) { const ov = catColorOverrides(); ov[cat] = color; localStorage.setItem('despensa_cat_color_ov', JSON.stringify(ov)); }
+function borrarCatColorOverride(cat) { const ov = catColorOverrides(); delete ov[cat]; localStorage.setItem('despensa_cat_color_ov', JSON.stringify(ov)); }
 function categoriasEfectivas() {
   const ov = catOverrides();
   const base = CATEGORIAS_LISTA_BASE.map(c => ov[c] || c);
@@ -760,6 +763,8 @@ const CAT_COLOR = {
 };
 const CAT_ORDEN = ['Almacén', 'Lácteos', 'Frutas y verduras', 'Carnes', 'Limpieza', 'Higiene', 'Bebidas', 'Otros'];
 function colorCategoria(cat) {
+  const colOv = catColorOverrides();
+  if (colOv[cat]) return colOv[cat];
   if (CAT_COLOR[cat]) return CAT_COLOR[cat];
   const pal = ['#f59e0b', '#3b82f6', '#22c55e', '#ef4444', '#06b6d4', '#a855f7', '#0ea5e9', '#ec4899', '#14b8a6', '#f97316'];
   let h = 0; for (let i = 0; i < cat.length; i++) h = (h * 31 + cat.charCodeAt(i)) >>> 0;
@@ -2258,25 +2263,66 @@ function renderGestorPanel() {
   const columnas = document.createElement('div');
   columnas.className = 'gestor-columnas';
 
-  columnas.appendChild(hacerSeccion('Categorías', categoriasEfectivas(), c => catBaseActualSet.has(c),
-    (viejo, nuevo) => {
-      renombrarEnConsumosYExtras('categoria', viejo, nuevo);
-      if (catBaseActualSet.has(viejo)) {
-        const ov = catOverrides();
-        const origKey = catBaseActualAOrig[viejo];
-        if (nuevo === origKey) delete ov[origKey]; else ov[origKey] = nuevo;
-        localStorage.setItem('despensa_cat_ov', JSON.stringify(ov));
-      } else {
-        const propias = categoriasPropias();
-        localStorage.setItem('despensa_categorias', JSON.stringify(propias.map(c => c === viejo ? nuevo : c)));
+  // Sección Categorías: squircle + botón configurar (nombre + color)
+  const secCats = document.createElement('div');
+  secCats.className = 'gestor-seccion';
+  secCats.innerHTML = '<h4>Categorías</h4>';
+  categoriasEfectivas().forEach(nombre => {
+    const fila = document.createElement('div');
+    fila.className = 'gestor-fila';
+
+    const dot = document.createElement('span');
+    dot.className = 'gestor-cat-dot';
+    dot.style.background = colorCategoria(nombre);
+    fila.appendChild(dot);
+
+    const span = document.createElement('span');
+    span.className = 'gestor-nombre' + (catBaseActualSet.has(nombre) ? ' gestor-base' : '');
+    span.textContent = nombre;
+    fila.appendChild(span);
+
+    const btnCfg = document.createElement('button');
+    btnCfg.className = 'iconbtn'; btnCfg.title = 'Configurar';
+    btnCfg.innerHTML = icono('lapiz');
+    btnCfg.addEventListener('click', () => abrirConfigCat(nombre, (nuevoNombre, nuevoColor) => {
+      // Guardar color (con el nuevo nombre como clave)
+      guardarCatColorOverride(nuevoNombre, nuevoColor);
+      if (nuevoNombre !== nombre) borrarCatColorOverride(nombre);
+      // Guardar nombre si cambió
+      if (nuevoNombre !== nombre) {
+        renombrarEnConsumosYExtras('categoria', nombre, nuevoNombre);
+        if (catBaseActualSet.has(nombre)) {
+          const ov = catOverrides();
+          const origKey = catBaseActualAOrig[nombre];
+          if (nuevoNombre === origKey) delete ov[origKey]; else ov[origKey] = nuevoNombre;
+          localStorage.setItem('despensa_cat_ov', JSON.stringify(ov));
+        } else {
+          const propias = categoriasPropias();
+          localStorage.setItem('despensa_categorias', JSON.stringify(propias.map(c => c === nombre ? nuevoNombre : c)));
+        }
+        rebuildDropdownCategoria();
       }
-      rebuildDropdownCategoria();
-    },
-    nombre => {
-      localStorage.setItem('despensa_categorias', JSON.stringify(categoriasPropias().filter(c => c !== nombre)));
-      rebuildDropdownCategoria();
+      renderGestorPanel();
+      refrescarTodo();
+    }));
+    fila.appendChild(btnCfg);
+
+    if (!catBaseActualSet.has(nombre)) {
+      const btnDel = document.createElement('button');
+      btnDel.className = 'iconbtn borrar'; btnDel.title = 'Eliminar';
+      btnDel.textContent = '✕';
+      btnDel.addEventListener('click', () => abrirConfirm(`¿Eliminar "${nombre}"?`, () => {
+        localStorage.setItem('despensa_categorias', JSON.stringify(categoriasPropias().filter(c => c !== nombre)));
+        borrarCatColorOverride(nombre);
+        rebuildDropdownCategoria();
+        renderGestorPanel();
+        refrescarTodo();
+      }));
+      fila.appendChild(btnDel);
     }
-  ));
+    secCats.appendChild(fila);
+  });
+  columnas.appendChild(secCats);
 
   const ovU = unidOverrides();
   const unidBaseActualAOrig = {};
@@ -2305,6 +2351,39 @@ function renderGestorPanel() {
 
   cont.appendChild(columnas);
 }
+
+// ===== Modal configurar categoría =====
+let _catConfigOnGuardar = null;
+let _catConfigColor = '';
+
+function abrirConfigCat(nombre, onGuardar) {
+  _catConfigOnGuardar = onGuardar;
+  _catConfigColor = catColorOverrides()[nombre] || colorCategoria(nombre);
+  document.getElementById('cat-config-nombre').value = nombre;
+  document.getElementById('cat-config-dot').style.background = _catConfigColor;
+  document.getElementById('cat-config-overlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('cat-config-nombre').focus(), 60);
+}
+
+document.getElementById('cat-config-color-btn').addEventListener('click', () => {
+  abrirRueda(_catConfigColor, hex => {
+    _catConfigColor = hex;
+    document.getElementById('cat-config-dot').style.background = hex;
+  });
+});
+document.getElementById('cat-config-guardar').addEventListener('click', () => {
+  const nom = document.getElementById('cat-config-nombre').value.trim();
+  if (!nom) { toast('Escribí un nombre'); return; }
+  document.getElementById('cat-config-overlay').style.display = 'none';
+  if (_catConfigOnGuardar) _catConfigOnGuardar(nom, _catConfigColor);
+});
+document.getElementById('cat-config-cancelar').addEventListener('click', () => {
+  document.getElementById('cat-config-overlay').style.display = 'none';
+});
+document.getElementById('cat-config-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('cat-config-overlay'))
+    document.getElementById('cat-config-overlay').style.display = 'none';
+});
 
 addTap(document.getElementById('btn-gestor-uc'), () => { renderGestorPanel(); gestorOverlay.style.display = 'flex'; });
 document.getElementById('gestor-cerrar').addEventListener('click', () => { gestorOverlay.style.display = 'none'; });
