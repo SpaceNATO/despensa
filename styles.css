@@ -912,20 +912,13 @@ canvas { margin: 12px 0; max-height: 320px; }
 }
 .sheet-titulo { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
 .sheet-titulo svg.ico { width: 20px; height: 20px; color: var(--accent); }
-.ajuste-fila-botones { display: flex; gap: 10px; margin-bottom: 12px; }
-.ajuste-seccion-mitad { flex: 1; min-width: 0; margin-bottom: 0 !important; }
-.ajuste-seccion {
-  background: #F7F8FC;
-  border-radius: 14px;
-  padding: 14px;
-  margin-bottom: 12px;
+/* ===== Panel Ajustes ===== */
+.ajuste-label {
+  font-size: 11px; font-weight: 700; color: var(--gris-osc);
+  text-transform: uppercase; letter-spacing: .5px;
+  margin: 16px 0 7px; padding: 0;
 }
-:root[data-theme="dark"] .ajuste-seccion { background: rgba(255, 255, 255, .055); }
-.ajuste-seccion h3 {
-  margin: 0 0 13px; font-size: 12px; color: var(--gris-osc);
-  text-transform: uppercase; letter-spacing: .4px;
-}
-.swatches { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.swatches { display: flex; flex-wrap: nowrap; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 4px; margin-bottom: 2px; }
 /* Todos los círculos: exactamente 24x24 perfectamente redondos */
 .swatch {
   width: 24px; height: 24px; border-radius: 50%;
@@ -949,7 +942,9 @@ canvas { margin: 12px 0; max-height: 320px; }
   border-radius: 8px; flex: none;
   box-shadow: 0 0 0 2px var(--bg-elev), 0 0 0 3.5px var(--accent);
 }
-.modo-botones { display: flex; gap: 12px; }
+.swatch-actual-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: none; }
+.swatch-actual-lbl { font-size: 9px; font-weight: 700; letter-spacing: .4px; color: var(--gris-osc); opacity: .6; }
+.modo-botones { display: flex; gap: 8px; margin-bottom: 2px; }
 .modo-btn {
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
   padding: 12px; border-radius: 12px;
@@ -961,6 +956,38 @@ canvas { margin: 12px 0; max-height: 320px; }
   border-color: var(--accent); color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
+/* Fila: Compartir y Borrar datos */
+.ajuste-fila {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 11px 14px; background: var(--bg-elev); border-radius: 14px;
+  border: none; cursor: pointer; text-align: left; margin-bottom: 2px;
+}
+.ajuste-fila-ico {
+  width: 34px; height: 34px; border-radius: 9px; flex: none;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  display: flex; align-items: center; justify-content: center;
+}
+.ajuste-fila-ico svg.ico { width: 17px; height: 17px; color: var(--accent); }
+.ajuste-fila-txt { flex: 1; font-size: 15px; font-weight: 600; color: var(--texto); }
+.ajuste-fila-chev { font-size: 20px; color: var(--gris-osc); opacity: .3; line-height: 1; }
+.ajuste-fila-peligro .ajuste-fila-ico { background: color-mix(in srgb, #ef4444 14%, transparent); }
+.ajuste-fila-peligro .ajuste-fila-ico svg.ico { color: #ef4444; }
+.ajuste-fila-peligro .ajuste-fila-txt { color: #ef4444; }
+/* Cards: Datos cargados + Gestionar */
+.ajuste-dos-cols { display: flex; gap: 10px; margin-bottom: 2px; }
+.ajuste-dos-cols > div { flex: 1; display: flex; flex-direction: column; }
+.ajuste-card {
+  flex: 1; width: 100%; padding: 14px 12px;
+  background: var(--bg-elev); border-radius: 14px; border: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 600; color: var(--texto); text-align: center;
+}
+.ajuste-card-ico {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  display: flex; align-items: center; justify-content: center;
+}
+.ajuste-card-ico svg.ico { width: 17px; height: 17px; color: var(--accent); }
 
 /* ===== Rueda selectora de color ===== */
 .rueda-modal { max-width: 320px; }

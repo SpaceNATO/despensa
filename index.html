@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=59" />
+  <link rel="stylesheet" href="styles.css?v=60" />
 </head>
 <body>
   <header>
@@ -185,51 +185,53 @@
       <div class="sheet-handle"></div>
       <h2 class="sheet-titulo"><span data-ico="ajuste" aria-hidden="true"></span> Ajustes</h2>
 
-      <div class="ajuste-seccion">
-        <h3>Color principal</h3>
-        <div class="swatches" id="set-principal"></div>
+      <p class="ajuste-label">Color principal</p>
+      <div class="swatches" id="set-principal"></div>
+
+      <p class="ajuste-label">Color de fondo</p>
+      <div class="swatches" id="set-fondo"></div>
+
+      <p class="ajuste-label">Color de texto</p>
+      <div class="swatches" id="set-texto"></div>
+
+      <p class="ajuste-label">Modo</p>
+      <div class="modo-botones">
+        <button type="button" id="modo-claro" class="modo-btn"><span data-ico="sol" aria-hidden="true"></span> Claro</button>
+        <button type="button" id="modo-oscuro" class="modo-btn"><span data-ico="luna" aria-hidden="true"></span> Oscuro</button>
       </div>
 
-      <div class="ajuste-seccion">
-        <h3>Color de fondo</h3>
-        <div class="swatches" id="set-fondo"></div>
-      </div>
+      <p class="ajuste-label">Compartir despensa</p>
+      <button type="button" id="btn-compartir" class="ajuste-fila">
+        <span class="ajuste-fila-ico" data-ico="personas" aria-hidden="true"></span>
+        <span class="ajuste-fila-txt" id="compartir-estado">Compartir con otra persona</span>
+        <span class="ajuste-fila-chev">›</span>
+      </button>
 
-      <div class="ajuste-seccion">
-        <h3>Color de texto</h3>
-        <div class="swatches" id="set-texto"></div>
-      </div>
-
-      <div class="ajuste-seccion">
-        <h3>Modo</h3>
-        <div class="modo-botones">
-          <button type="button" id="modo-claro" class="modo-btn"><span data-ico="sol" aria-hidden="true"></span> Claro</button>
-          <button type="button" id="modo-oscuro" class="modo-btn"><span data-ico="luna" aria-hidden="true"></span> Oscuro</button>
+      <div class="ajuste-dos-cols">
+        <div>
+          <p class="ajuste-label">Datos cargados</p>
+          <button type="button" id="btn-datos-cargados" class="ajuste-card">
+            <span class="ajuste-card-ico" data-ico="tabla" aria-hidden="true"></span>
+            <span>Productos conocidos</span>
+          </button>
+        </div>
+        <div>
+          <p class="ajuste-label">Unidades y categorías</p>
+          <button type="button" id="btn-gestor-uc" class="ajuste-card">
+            <span class="ajuste-card-ico" data-ico="filtros" aria-hidden="true"></span>
+            <span>Gestionar</span>
+          </button>
         </div>
       </div>
 
-      <div class="ajuste-seccion">
-        <h3>Compartir despensa</h3>
-        <button type="button" id="btn-compartir" class="modo-btn" style="width:100%"><span data-ico="personas" aria-hidden="true"></span> <span id="compartir-estado">Compartir con otra persona</span></button>
-      </div>
+      <p class="ajuste-label">Zona de peligro</p>
+      <button type="button" id="btn-borrar-datos" class="ajuste-fila ajuste-fila-peligro">
+        <span class="ajuste-fila-ico" data-ico="borrar" aria-hidden="true"></span>
+        <span class="ajuste-fila-txt">Borrar todos los datos</span>
+        <span class="ajuste-fila-chev">›</span>
+      </button>
 
-      <div class="ajuste-fila-botones">
-        <div class="ajuste-seccion ajuste-seccion-mitad">
-          <h3>Datos cargados</h3>
-          <button type="button" id="btn-datos-cargados" class="modo-btn" style="width:100%">Productos conocidos</button>
-        </div>
-        <div class="ajuste-seccion ajuste-seccion-mitad">
-          <h3>Unidades y categorías</h3>
-          <button type="button" id="btn-gestor-uc" class="modo-btn" style="width:100%">Gestionar</button>
-        </div>
-      </div>
-
-      <div class="ajuste-seccion">
-        <h3>Zona de peligro</h3>
-        <button type="button" id="btn-borrar-datos" class="btn-peligro" style="width:100%">Borrar todos los datos</button>
-      </div>
-
-      <p id="ajustes-version" style="text-align:center;font-size:.75rem;opacity:.45;margin:8px 0 0"></p>
+      <p id="ajustes-version" style="text-align:center;font-size:.75rem;opacity:.45;margin:16px 0 4px"></p>
       <button id="ajustes-cerrar" class="btn-primary">Listo</button>
     </div>
   </div>
@@ -424,6 +426,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=59"></script>
+  <script src="app.js?v=60"></script>
 </body>
 </html>
