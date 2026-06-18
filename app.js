@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.57';
+const APP_VERSION = '0.58';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -757,11 +757,19 @@ function renderPrediccion() {
 // ===== STOCK (feature 4) =====
 // Color por categoría (las propias derivan un color estable de su nombre)
 const CAT_COLOR = {
-  'Almacén': '#f59e0b', 'Lácteos': '#3b82f6', 'Frutas y verduras': '#22c55e',
-  'Carnes': '#ef4444', 'Limpieza': '#06b6d4', 'Higiene': '#a855f7',
-  'Bebidas': '#0ea5e9', 'Otros': '#64748b',
+  'Almacén':           'oklch(0.70 0.12 70)',
+  'Frutas y verduras': 'oklch(0.70 0.12 145)',
+  'Carnes':            'oklch(0.66 0.12 25)',
+  'Enlatados':         'oklch(0.72 0.12 110)',
+  'Lácteos':           'oklch(0.70 0.12 250)',
+  'Bebidas':           'oklch(0.70 0.11 190)',
+  'Snacks y golosinas':'oklch(0.68 0.12 340)',
+  'Limpieza':          'oklch(0.70 0.12 210)',
+  'Higiene':           'oklch(0.68 0.12 300)',
+  'Mascotas':          'oklch(0.58 0.06 40)',
+  'Otros':             'oklch(0.68 0.03 250)',
 };
-const CAT_ORDEN = ['Almacén', 'Lácteos', 'Frutas y verduras', 'Carnes', 'Limpieza', 'Higiene', 'Bebidas', 'Otros'];
+const CAT_ORDEN = ['Almacén', 'Frutas y verduras', 'Carnes', 'Enlatados', 'Lácteos', 'Bebidas', 'Snacks y golosinas', 'Limpieza', 'Higiene', 'Mascotas', 'Otros'];
 function colorCategoria(cat) {
   const colOv = catColorOverrides();
   if (colOv[cat]) return colOv[cat];
@@ -1140,7 +1148,7 @@ function elegirSugerenciaLista(nombre) {
 }
 
 const UNIDADES_LISTA_BASE = ['u', 'L', 'kg', 'g', 'ml', 'rollo', 'paquete'];
-const CATEGORIAS_LISTA_BASE = ['Almacén', 'Lácteos', 'Frutas y verduras', 'Carnes', 'Limpieza', 'Higiene', 'Bebidas', 'Otros'];
+const CATEGORIAS_LISTA_BASE = ['Almacén', 'Frutas y verduras', 'Carnes', 'Enlatados', 'Lácteos', 'Bebidas', 'Snacks y golosinas', 'Limpieza', 'Higiene', 'Mascotas', 'Otros'];
 
 function listaItemInfoConocida(nombre) {
   const c = datos.consumos.find(x => x.producto === nombre);
@@ -1408,9 +1416,10 @@ function consumosPeriodo() {
   return datos.consumos.filter(c => meses.has(mesClave(c.fecha)));
 }
 
-function hexAlpha(hex, a) {
+function hexAlpha(color, a) {
+  const hex = colorToHex(color);
   const m = /^#(..)(..)(..)$/.exec(hex);
-  if (!m) return hex;
+  if (!m) return color;
   return `rgba(${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)},${a.toFixed(2)})`;
 }
 
@@ -1966,6 +1975,16 @@ function hex2rgb(hex) {
   const n = hex.replace('#', '');
   return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
 }
+function colorToHex(color) {
+  if (/^#[0-9a-fA-F]{6}$/.test(color)) return color;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 1;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, 1, 1);
+  const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+}
 function rgb2hex(r, g, b) {
   return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
 }
@@ -2027,7 +2046,7 @@ ruedaBrillo.addEventListener('input', () => { ruedaV = ruedaBrillo.value / 100; 
 function abrirRueda(colorInicial, onElegir) {
   if (!ruedaLista) dibujarRueda();
   ruedaOnElegir = onElegir;
-  const [h, s, v] = rgb2hsv(...hex2rgb(colorInicial));
+  const [h, s, v] = rgb2hsv(...hex2rgb(colorToHex(colorInicial)));
   ruedaH = h; ruedaS = s; ruedaV = v;
   ruedaBrillo.value = Math.round(v * 100);
   ruedaActualizar();
