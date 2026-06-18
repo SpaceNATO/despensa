@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=55" />
+  <link rel="stylesheet" href="styles.css?v=56" />
 </head>
 <body>
   <header>
@@ -234,6 +234,10 @@
     <div class="sheet" role="dialog" aria-modal="true">
       <div class="sheet-handle"></div>
       <h2 class="sheet-titulo">Productos conocidos</h2>
+      <div class="datos-sort-bar">
+        <button type="button" id="datos-sort-alfa" class="datos-sort-btn activo">A → Z</button>
+        <button type="button" id="datos-sort-cat" class="datos-sort-btn">Por categoría</button>
+      </div>
       <div id="datos-lista"></div>
       <button id="datos-cerrar" class="btn-primary" style="margin-top:16px">Listo</button>
     </div>
@@ -415,6 +419,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=55"></script>
+  <script src="app.js?v=56"></script>
 </body>
 </html>

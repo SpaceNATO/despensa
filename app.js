@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.55';
+const APP_VERSION = '0.56';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -2128,14 +2128,43 @@ function rebuildDropdownUnidad() {
 }
 
 const datosOverlay = document.getElementById('datos-overlay');
+let datosSortMode = 'alfa'; // 'alfa' | 'cat'
 
 function renderDatosPanel() {
   const lista = document.getElementById('datos-lista');
-  const prods = todosProductosConocidos();
+  let prods = todosProductosConocidos(); // ya viene ordenado A→Z
   lista.innerHTML = '';
+
+  // Actualizar botones de sort
+  document.getElementById('datos-sort-alfa').classList.toggle('activo', datosSortMode === 'alfa');
+  document.getElementById('datos-sort-cat').classList.toggle('activo', datosSortMode === 'cat');
+
   if (!prods.length) { lista.innerHTML = '<p class="datos-vacio">No hay productos cargados aún.</p>'; return; }
 
+  if (datosSortMode === 'cat') {
+    prods = [...prods].sort(([na, ia], [nb, ib]) => {
+      const ca = ia.categoria || 'Otros', cb = ib.categoria || 'Otros';
+      return ca.localeCompare(cb) || na.localeCompare(nb);
+    });
+  }
+
+  let ultimaCat = null;
   prods.forEach(([nombre, info]) => {
+    // Header de categoría cuando se ordena por categoría
+    if (datosSortMode === 'cat') {
+      const cat = info.categoria || 'Otros';
+      if (cat !== ultimaCat) {
+        ultimaCat = cat;
+        const header = document.createElement('div');
+        header.className = 'datos-cat-header';
+        const dot = document.createElement('span');
+        dot.className = 'gestor-cat-dot';
+        dot.style.background = colorCategoria(cat);
+        header.appendChild(dot);
+        header.appendChild(Object.assign(document.createElement('span'), { textContent: cat }));
+        lista.appendChild(header);
+      }
+    }
     const fila = document.createElement('div');
     fila.className = 'datos-fila';
 
@@ -2191,6 +2220,8 @@ function renombrarProducto(viejo, nuevo) {
 addTap(document.getElementById('btn-datos-cargados'), () => { renderDatosPanel(); datosOverlay.style.display = 'flex'; });
 document.getElementById('datos-cerrar').addEventListener('click', () => { datosOverlay.style.display = 'none'; });
 datosOverlay.addEventListener('click', e => { if (e.target === datosOverlay) datosOverlay.style.display = 'none'; });
+document.getElementById('datos-sort-alfa').addEventListener('click', () => { datosSortMode = 'alfa'; renderDatosPanel(); });
+document.getElementById('datos-sort-cat').addEventListener('click', () => { datosSortMode = 'cat'; renderDatosPanel(); });
 
 // ===== Gestionar unidades y categorías =====
 const gestorOverlay = document.getElementById('gestor-overlay');

@@ -484,6 +484,11 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .btn-agregar-lista:active { background: color-mix(in srgb, var(--accent) 8%, transparent); }
 
 /* ===== Datos cargados ===== */
+.datos-sort-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+.datos-sort-btn { flex: 1; padding: 7px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1.5px solid var(--borde); background: transparent; color: var(--gris-osc); cursor: pointer; font-family: 'Nunito', inherit; }
+.datos-sort-btn.activo { background: color-mix(in srgb, var(--accent) 15%, transparent); border-color: var(--accent); color: var(--accent); }
+.datos-cat-header { display: flex; align-items: center; gap: 8px; padding: 10px 0 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gris-osc); }
+.datos-cat-header .gestor-cat-dot { width: 14px; height: 14px; border-radius: 4px; }
 .datos-vacio { color: var(--gris-osc); text-align: center; padding: 24px 0; font-size: 14px; }
 .datos-fila { display: flex; flex-direction: row; align-items: center; gap: 6px; padding: 9px 0; border-bottom: 1px solid var(--borde); }
 .datos-fila:last-child { border-bottom: none; }
@@ -853,8 +858,9 @@ canvas { margin: 12px 0; max-height: 320px; }
 .modal-prompt-input:focus { outline: none; border-color: var(--accent); }
 #modal-overlay.prompt-top { align-items: flex-start; padding-top: min(28vh, 110px); }
 
-/* Modal lista-item: aparece al tercio superior */
+/* Modal lista-item y cat-config: aparecen al tercio superior */
 .lista-item-overlay { align-items: flex-start; padding-top: min(28vh, 110px); }
+#cat-config-overlay { align-items: flex-start; padding-top: min(33vh, 130px); }
 .lista-item-form { display: flex; flex-direction: column; gap: 10px; margin: 12px 0 0; }
 .lista-item-row { display: flex; gap: 10px; }
 .lista-item-campo { display: flex; flex-direction: column; gap: 4px; flex: 1; }
