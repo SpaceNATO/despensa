@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.56';
+const APP_VERSION = '0.57';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -2171,12 +2171,18 @@ function renderDatosPanel() {
     const inp = document.createElement('input');
     inp.type = 'text'; inp.className = 'datos-nombre-input';
     inp.value = nombre; inp.dataset.original = nombre;
-    inp.addEventListener('blur', () => {
+    const _guardarNombre = () => {
       const nuevo = inp.value.trim();
       if (!nuevo || nuevo === inp.dataset.original) { inp.value = inp.dataset.original; return; }
       renombrarProducto(inp.dataset.original, nuevo);
       inp.dataset.original = nuevo;
-    });
+    };
+    inp.addEventListener('blur', _guardarNombre);
+    if (isTouchDevice) {
+      inp.setAttribute('readonly', '');
+      addTap(inp, () => abrirQwerty(inp));
+      inp.addEventListener('input', _guardarNombre);
+    }
     fila.appendChild(inp);
 
     const selU = document.createElement('select');
@@ -2331,8 +2337,8 @@ function renderGestorPanel() {
           const propias = categoriasPropias();
           localStorage.setItem('despensa_categorias', JSON.stringify(propias.map(c => c === nombre ? nuevoNombre : c)));
         }
-        rebuildDropdownCategoria();
       }
+      rebuildDropdownCategoria(); // siempre: actualiza puntos de color en el dropdown de cargar
       renderGestorPanel();
       refrescarTodo();
     }));
@@ -2390,10 +2396,12 @@ let _catConfigColor = '';
 function abrirConfigCat(nombre, onGuardar) {
   _catConfigOnGuardar = onGuardar;
   _catConfigColor = catColorOverrides()[nombre] || colorCategoria(nombre);
-  document.getElementById('cat-config-nombre').value = nombre;
+  const inp = document.getElementById('cat-config-nombre');
+  inp.value = nombre;
   document.getElementById('cat-config-dot').style.background = _catConfigColor;
   document.getElementById('cat-config-overlay').style.display = 'flex';
-  setTimeout(() => document.getElementById('cat-config-nombre').focus(), 60);
+  if (isTouchDevice) { setTimeout(() => abrirQwerty(inp), 80); }
+  else { setTimeout(() => inp.focus(), 60); }
 }
 
 document.getElementById('cat-config-color-btn').addEventListener('click', () => {
@@ -2441,6 +2449,22 @@ function cerrarAjustes() { ajustesOverlay.style.display = 'none'; }
 
 document.getElementById('btn-ajustes').addEventListener('click', abrirAjustes);
 document.getElementById('ajustes-cerrar').addEventListener('click', cerrarAjustes);
+
+addTap(document.getElementById('btn-borrar-datos'), () => {
+  abrirConfirm('¿Borrar TODOS los datos?\nSe eliminarán consumos, stock, lista e historial. Esta acción no se puede deshacer.', () => {
+    datos = { consumos: [], stock: {}, carrito: [] };
+    guardarDatos();
+    listaExtras = []; guardarExtrasLocal();
+    listaCantidades.clear(); guardarCantidadesLocal();
+    seleccionados.clear();
+    if (enCasa()) {
+      nubeReemplazarTodo(datos).catch(avisarErrorNube);
+    }
+    cerrarAjustes();
+    refrescarTodo();
+    toast('Datos borrados');
+  });
+});
 // Tocar fuera del panel = cerrar, solo si el gesto EMPEZÓ sobre el fondo
 let ajustesDownEnFondo = false;
 ajustesOverlay.addEventListener('mousedown', (e) => { ajustesDownEnFondo = (e.target === ajustesOverlay); });
