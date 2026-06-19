@@ -988,6 +988,35 @@ canvas { margin: 12px 0; max-height: 320px; }
   display: flex; align-items: center; justify-content: center;
 }
 .ajuste-card-ico svg.ico { width: 17px; height: 17px; color: var(--accent); }
+/* Split colores + perfil */
+.ajuste-top-split { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 4px; }
+.ajuste-top-colores { flex: 1; min-width: 0; }
+.ajuste-top-perfil { flex: none; width: 82px; display: flex; flex-direction: column; }
+.ajuste-top-perfil .ajuste-label { margin-top: 0; }
+.ajuste-perfil-card {
+  flex: 1; width: 100%; background: var(--bg-elev); border-radius: 14px;
+  border: none; cursor: pointer; padding: 16px 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px;
+  min-height: 90px;
+}
+.perfil-avatar {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-size: 21px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.perfil-nombre {
+  font-size: 11px; font-weight: 700; color: var(--texto);
+  text-align: center; width: 100%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Badge autor en últimos consumos */
+.consumo-autor {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; border-radius: 50%; flex: none;
+  background: var(--accent); color: #fff;
+  font-size: 9px; font-weight: 800; text-transform: uppercase;
+}
 
 /* ===== Rueda selectora de color ===== */
 .rueda-modal { max-width: 320px; }

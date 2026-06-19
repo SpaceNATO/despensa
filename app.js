@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.62';
+const APP_VERSION = '0.63';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -368,7 +368,8 @@ const inputCategoria = document.getElementById('categoria');
 
 // Registra un consumo y descuenta del stock si ese producto se controla
 function registrarConsumo(producto, cantidad, unidad, categoria) {
-  const c = { id: uid(), producto, cantidad, unidad, categoria, fecha: new Date().toISOString(), comprado: false };
+  const autor = usuarioNombre();
+  const c = { id: uid(), producto, cantidad, unidad, categoria, fecha: new Date().toISOString(), comprado: false, ...(autor && { autor }) };
   if (enCasa()) {
     nubeAgregarConsumo(c);
     if (datos.stock[producto]) {
@@ -503,6 +504,15 @@ function unidOverrides() { try { return JSON.parse(localStorage.getItem('despens
 function catColorOverrides() { try { return JSON.parse(localStorage.getItem('despensa_cat_color_ov') || '{}'); } catch { return {}; } }
 function guardarCatColorOverride(cat, color) { const ov = catColorOverrides(); ov[cat] = color; localStorage.setItem('despensa_cat_color_ov', JSON.stringify(ov)); }
 function borrarCatColorOverride(cat) { const ov = catColorOverrides(); delete ov[cat]; localStorage.setItem('despensa_cat_color_ov', JSON.stringify(ov)); }
+
+function usuarioNombre() { return localStorage.getItem('despensa_usuario_nombre') || ''; }
+function usuarioNombreDisplay() { return usuarioNombre() || 'Tu nombre'; }
+function usuarioInicial() { const n = usuarioNombre(); return n ? n.charAt(0).toUpperCase() : '?'; }
+function guardarUsuarioNombre(n) {
+  const t = n.trim();
+  if (t) localStorage.setItem('despensa_usuario_nombre', t);
+  else localStorage.removeItem('despensa_usuario_nombre');
+}
 function categoriasEfectivas() {
   const ov = catOverrides();
   const base = CATEGORIAS_LISTA_BASE.map(c => ov[c] || c);
@@ -683,6 +693,7 @@ function renderUltimos() {
           <span class="consumo-cat">${escapeHtml(c.categoria || '')}</span>
           <span class="consumo-sep">·</span>
           <span class="consumo-tiempo">${tiempoRelativo(c.fecha)}</span>
+          ${c.autor ? `<span class="consumo-sep">·</span><span class="consumo-autor" title="${escapeHtml(c.autor)}">${escapeHtml(c.autor.charAt(0).toUpperCase())}</span>` : ''}
         </div>
       </div>
       <div class="consumo-acciones">
@@ -2460,6 +2471,8 @@ gestorOverlay.addEventListener('click', e => { if (e.target === gestorOverlay) g
 
 function renderAjustes() {
   document.getElementById('ajustes-version').textContent = 'Mi Despensa ' + APP_VERSION;
+  document.getElementById('perfil-avatar').textContent = usuarioInicial();
+  document.getElementById('perfil-nombre').textContent = usuarioNombreDisplay();
   renderSwatches('set-principal', COLORES, colorActual(), (c) => {
     const preset = COLORES.find(x => x.c === c);
     aplicarColor(c, preset ? preset.o : undefined);
@@ -2479,6 +2492,26 @@ function cerrarAjustes() { ajustesOverlay.style.display = 'none'; }
 
 document.getElementById('btn-ajustes').addEventListener('click', abrirAjustes);
 document.getElementById('ajustes-cerrar').addEventListener('click', cerrarAjustes);
+
+// Perfil
+addTap(document.getElementById('btn-perfil'), () => {
+  const inp = document.getElementById('perfil-nombre-input');
+  inp.value = usuarioNombre();
+  document.getElementById('perfil-overlay').style.display = 'flex';
+  setTimeout(() => inp.focus(), 60);
+});
+document.getElementById('perfil-cancelar').addEventListener('click', () => {
+  document.getElementById('perfil-overlay').style.display = 'none';
+});
+document.getElementById('perfil-guardar').addEventListener('click', () => {
+  guardarUsuarioNombre(document.getElementById('perfil-nombre-input').value);
+  document.getElementById('perfil-overlay').style.display = 'none';
+  renderAjustes();
+  toast('Perfil guardado');
+});
+document.getElementById('perfil-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('perfil-overlay')) document.getElementById('perfil-overlay').style.display = 'none';
+});
 
 addTap(document.getElementById('btn-borrar-datos'), () => {
   abrirConfirm('¿Borrar TODOS los datos?\nSe eliminarán consumos, stock, lista e historial. Esta acción no se puede deshacer.', () => {
