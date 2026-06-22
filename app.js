@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.63';
+const APP_VERSION = '0.64';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -693,7 +693,7 @@ function renderUltimos() {
           <span class="consumo-cat">${escapeHtml(c.categoria || '')}</span>
           <span class="consumo-sep">·</span>
           <span class="consumo-tiempo">${tiempoRelativo(c.fecha)}</span>
-          ${c.autor ? `<span class="consumo-sep">·</span><span class="consumo-autor" title="${escapeHtml(c.autor)}">${escapeHtml(c.autor.charAt(0).toUpperCase())}</span>` : ''}
+          ${c.autor ? `<span class="consumo-sep">·</span><span class="consumo-autor">${escapeHtml(c.autor.charAt(0).toUpperCase())}</span><span class="consumo-autor-nombre">${escapeHtml(c.autor)}</span>` : ''}
         </div>
       </div>
       <div class="consumo-acciones">
