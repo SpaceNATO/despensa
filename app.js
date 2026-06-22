@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.65';
+const APP_VERSION = '0.67';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -937,7 +937,7 @@ function listaPendiente() {
   for (const [prod, st] of Object.entries(datos.stock)) {
     if (st.minimo > 0 && st.actual < st.minimo) {
       if (!map[prod]) {
-        map[prod] = { producto: prod, cantidad: 0, unidad: cat[prod] ? cat[prod].unidad : '', categoria: cat[prod] ? cat[prod].categoria : 'Otros', motivo: 'stock' };
+        map[prod] = { producto: prod, cantidad: 0, unidad: st.unidad || (cat[prod] ? cat[prod].unidad : ''), categoria: st.categoria || (cat[prod] ? cat[prod].categoria : 'Otros'), motivo: 'stock' };
       }
       map[prod].stockBajo = true;
     }
@@ -958,6 +958,27 @@ const listaIgnorados = new Set(); // ignorados temporalmente hasta la próxima c
 function guardarExtrasLocal() { try { localStorage.setItem('despensa_lista_extras', JSON.stringify(listaExtras)); } catch {} }
 function guardarCantidadesLocal() { try { localStorage.setItem('despensa_lista_cant', JSON.stringify([...listaCantidades])); } catch {} }
 
+// ===== Orden de la lista de compras ('alfa' | 'cat' | 'pasillo') =====
+function listaOrden() { return localStorage.getItem('despensa_lista_orden') || 'alfa'; }
+function guardarListaOrden(o) { localStorage.setItem('despensa_lista_orden', o); }
+function pasilloOrden() {
+  try { const a = JSON.parse(localStorage.getItem('despensa_pasillo_orden')); if (Array.isArray(a)) return a; } catch {}
+  return categoriasEfectivas();
+}
+function guardarPasilloOrden(arr) { localStorage.setItem('despensa_pasillo_orden', JSON.stringify(arr)); }
+function ordenarItemsLista(items) {
+  const arr = items.slice();
+  const byName = (a, b) => (a.producto || '').localeCompare(b.producto || '', 'es');
+  const modo = listaOrden();
+  if (modo === 'cat') return arr.sort((a, b) => (a.categoria || '').localeCompare(b.categoria || '', 'es') || byName(a, b));
+  if (modo === 'pasillo') {
+    const ord = pasilloOrden();
+    const idx = c => { const i = ord.indexOf(c || ''); return i === -1 ? 9999 : i; };
+    return arr.sort((a, b) => idx(a.categoria) - idx(b.categoria) || byName(a, b));
+  }
+  return arr.sort(byName); // 'alfa'
+}
+
 function guardarCarrito() {
   if (enCasa()) { nubeSetCarrito([...seleccionados]); return; }
   datos.carrito = [...seleccionados];
@@ -966,8 +987,10 @@ function guardarCarrito() {
 
 function renderLista() {
   const ul = document.getElementById('lista-compras');
+  actualizarBarraOrdenLista();
   const pendientes = listaPendiente();
-  const items = [...pendientes, ...listaExtras.filter(e => !pendientes.find(p => p.producto === e.producto))];
+  let items = [...pendientes, ...listaExtras.filter(e => !pendientes.find(p => p.producto === e.producto))];
+  items = ordenarItemsLista(items);
   const acciones = ['btn-confirmar', 'btn-whatsapp', 'btn-copiar'];
   if (items.length === 0) {
     ul.innerHTML = '<li class="vacio">¡Lista vacía! No hay nada para reponer.</li>';
@@ -1072,6 +1095,49 @@ function renderLista() {
   actualizarBotonConfirmar();
   actualizarProgreso();
 }
+
+function actualizarBarraOrdenLista() {
+  const m = listaOrden();
+  document.getElementById('lista-sort-alfa').classList.toggle('activo', m === 'alfa');
+  document.getElementById('lista-sort-cat').classList.toggle('activo', m === 'cat');
+  document.getElementById('lista-sort-pasillo').classList.toggle('activo', m === 'pasillo');
+  document.getElementById('lista-sort-pasillo-edit').hidden = (m !== 'pasillo');
+}
+function setOrdenLista(o) { guardarListaOrden(o); renderLista(); }
+document.getElementById('lista-sort-alfa').addEventListener('click', () => setOrdenLista('alfa'));
+document.getElementById('lista-sort-cat').addEventListener('click', () => setOrdenLista('cat'));
+document.getElementById('lista-sort-pasillo').addEventListener('click', () => setOrdenLista('pasillo'));
+document.getElementById('lista-sort-pasillo-edit').addEventListener('click', abrirPasilloEditor);
+
+// ---- Editor de orden de pasillos (orden de categorías) ----
+function renderPasilloEditor() {
+  const cont = document.getElementById('pasillo-lista');
+  const cats = categoriasEfectivas();
+  let ord = pasilloOrden().filter(c => cats.includes(c)); // sacar categorías que ya no existen
+  cats.forEach(c => { if (!ord.includes(c)) ord.push(c); }); // sumar categorías nuevas al final
+  guardarPasilloOrden(ord);
+  cont.innerHTML = ord.map((c, i) => `
+    <div class="pasillo-fila">
+      <span class="gestor-cat-dot" style="background:${colorCategoria(c)}"></span>
+      <span class="pasillo-nombre">${escapeHtml(c)}</span>
+      <button type="button" class="pasillo-mov" data-i="${i}" data-dir="-1" ${i === 0 ? 'disabled' : ''} aria-label="Subir">↑</button>
+      <button type="button" class="pasillo-mov" data-i="${i}" data-dir="1" ${i === ord.length - 1 ? 'disabled' : ''} aria-label="Bajar">↓</button>
+    </div>`).join('');
+  cont.querySelectorAll('.pasillo-mov').forEach(btn => btn.addEventListener('click', () => {
+    const i = parseInt(btn.dataset.i, 10), j = i + parseInt(btn.dataset.dir, 10);
+    const a = pasilloOrden();
+    if (j < 0 || j >= a.length) return;
+    [a[i], a[j]] = [a[j], a[i]];
+    guardarPasilloOrden(a);
+    renderPasilloEditor();
+  }));
+}
+function abrirPasilloEditor() { renderPasilloEditor(); document.getElementById('pasillo-overlay').style.display = 'flex'; }
+function cerrarPasilloEditor() { document.getElementById('pasillo-overlay').style.display = 'none'; renderLista(); }
+document.getElementById('pasillo-cerrar').addEventListener('click', cerrarPasilloEditor);
+document.getElementById('pasillo-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('pasillo-overlay')) cerrarPasilloEditor();
+});
 
 // El botón confirma lo del carrito; si no hay nada marcado, confirma toda la lista.
 function actualizarBotonConfirmar() {
@@ -1644,7 +1710,39 @@ function renderTotalesHistorial() {
   }));
 }
 
-function renderHistorial() { renderHeatmap(); renderLineaChart(); renderTotalesHistorial(); }
+function renderPersonasHistorial() {
+  const card = document.getElementById('hist-personas-card');
+  const cont = document.getElementById('hist-personas');
+  const consumos = consumosPeriodo();
+  const personas = {};
+  for (const c of consumos) {
+    const nombre = c.autor || 'Sin asignar';
+    if (!personas[nombre]) personas[nombre] = { nombre, count: 0, color: c.autorColor || '', sinAutor: !c.autor };
+    personas[nombre].count += 1;
+    if (c.autorColor) personas[nombre].color = c.autorColor;
+  }
+  const lista = Object.values(personas).sort((a, b) => b.count - a.count);
+  // Solo tiene sentido si al menos un consumo tiene autor cargado
+  if (!lista.some(p => !p.sinAutor)) { card.hidden = true; return; }
+  card.hidden = false;
+  const max = Math.max(...lista.map(p => p.count), 1);
+  const total = lista.reduce((s, p) => s + p.count, 0) || 1;
+  cont.innerHTML = lista.map(p => {
+    const color = p.sinAutor ? 'var(--borde)' : (p.color || 'var(--accent)');
+    const inicial = p.sinAutor ? '?' : p.nombre.charAt(0).toUpperCase();
+    const pct = Math.round(p.count / max * 100);
+    const pctTotal = Math.round(p.count / total * 100);
+    return `<div class="persona-fila">
+      <span class="persona-avatar" style="background:${color}">${escapeHtml(inicial)}</span>
+      <div class="persona-info">
+        <div class="persona-top"><span class="persona-nombre">${escapeHtml(p.nombre)}</span><span class="persona-count">${p.count} · ${pctTotal}%</span></div>
+        <div class="persona-barra"><div class="persona-fill" style="width:${pct}%;background:${color}"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderHistorial() { renderHeatmap(); renderLineaChart(); renderTotalesHistorial(); renderPersonasHistorial(); }
 
 document.querySelectorAll('.periodo-btn').forEach(btn => addTap(btn, () => {
   periodoHistorial = btn.dataset.p;

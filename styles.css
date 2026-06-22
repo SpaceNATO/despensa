@@ -876,6 +876,27 @@ canvas { margin: 12px 0; max-height: 320px; }
 .lista-item-overlay { align-items: flex-start; padding-top: min(28vh, 110px); }
 #cat-config-overlay { align-items: flex-start; padding-top: min(33vh, 130px); }
 #perfil-overlay { align-items: flex-start; padding-top: min(33vh, 130px); }
+
+/* Orden de la lista de compras */
+.lista-sort-bar { margin-bottom: 8px; }
+.lista-pasillo-edit { display: block; margin: 0 0 12px; padding: 2px 4px; background: none; border: none; color: var(--accent); font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: 'Nunito', inherit; }
+.pasillo-fila { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--borde); }
+.pasillo-fila:last-child { border-bottom: none; }
+.pasillo-fila .gestor-cat-dot { width: 16px; height: 16px; border-radius: 5px; flex: none; }
+.pasillo-nombre { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--texto); }
+.pasillo-mov { width: 34px; height: 34px; border-radius: 9px; border: 1.5px solid var(--borde); background: transparent; color: var(--texto); font-size: 15px; cursor: pointer; flex: none; }
+.pasillo-mov:disabled { opacity: .3; }
+
+/* Historial: consumo por persona */
+.persona-fila { display: flex; align-items: center; gap: 11px; padding: 10px 0; }
+.persona-fila + .persona-fila { border-top: 1px solid var(--borde); }
+.persona-avatar { width: 34px; height: 34px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 800; }
+.persona-info { flex: 1; min-width: 0; }
+.persona-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+.persona-nombre { font-size: 14px; font-weight: 700; color: var(--texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.persona-count { font-size: 12px; font-weight: 600; color: var(--gris-osc); flex: none; }
+.persona-barra { height: 8px; border-radius: 5px; background: color-mix(in srgb, var(--gris-osc) 18%, transparent); overflow: hidden; }
+.persona-fill { height: 100%; border-radius: 5px; transition: width .3s ease; }
 .lista-item-form { display: flex; flex-direction: column; gap: 10px; margin: 12px 0 0; }
 .lista-item-row { display: flex; gap: 10px; }
 .lista-item-campo { display: flex; flex-direction: column; gap: 4px; flex: 1; }

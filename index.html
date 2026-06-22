@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=65" />
+  <link rel="stylesheet" href="styles.css?v=67" />
 </head>
 <body>
   <header>
@@ -98,6 +98,12 @@
     <!-- ====== LISTA ====== -->
     <section id="tab-lista" class="tab">
       <p class="hint">Lo que consumiste desde la última compra, más lo que tiene poco stock.</p>
+      <div class="datos-sort-bar lista-sort-bar">
+        <button type="button" id="lista-sort-alfa" class="datos-sort-btn">A → Z</button>
+        <button type="button" id="lista-sort-cat" class="datos-sort-btn">Categoría</button>
+        <button type="button" id="lista-sort-pasillo" class="datos-sort-btn">Pasillo</button>
+      </div>
+      <button type="button" id="lista-sort-pasillo-edit" class="lista-pasillo-edit" hidden>⚙ Editar orden de pasillos</button>
       <div class="lista-card" id="lista-card">
         <div class="lista-progreso" id="lista-progreso" style="display:none">
           <div class="lista-prog-barra"><div class="lista-prog-fill" id="lista-prog-fill"></div></div>
@@ -159,6 +165,12 @@
       <div class="hist-card">
         <div class="hist-titulo" style="margin-bottom:10px">TOTALES</div>
         <div id="hist-totales"></div>
+      </div>
+
+      <!-- Consumo por persona -->
+      <div class="hist-card" id="hist-personas-card" hidden>
+        <div class="hist-titulo" style="margin-bottom:10px">POR PERSONA</div>
+        <div id="hist-personas"></div>
       </div>
 
       <h3>Datos y respaldo</h3>
@@ -266,6 +278,17 @@
       <h2 class="sheet-titulo">Unidades y categorías</h2>
       <div id="gestor-contenido"></div>
       <button id="gestor-cerrar" class="btn-primary" style="margin-top:16px">Listo</button>
+    </div>
+  </div>
+
+  <!-- Sheet: Editar orden de pasillos (orden de categorías para la lista) -->
+  <div id="pasillo-overlay" class="sheet-overlay" style="display:none">
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="sheet-handle"></div>
+      <h2 class="sheet-titulo">Orden de pasillos</h2>
+      <p class="hint" style="margin-top:-4px">Acomodá las categorías en el orden en que recorrés el súper.</p>
+      <div id="pasillo-lista"></div>
+      <button id="pasillo-cerrar" class="btn-primary" style="margin-top:16px">Listo</button>
     </div>
   </div>
 
@@ -452,6 +475,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=65"></script>
+  <script src="app.js?v=67"></script>
 </body>
 </html>
