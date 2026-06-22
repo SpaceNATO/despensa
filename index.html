@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=64" />
+  <link rel="stylesheet" href="styles.css?v=65" />
 </head>
 <body>
   <header>
@@ -274,7 +274,12 @@
     <div class="modal" role="dialog" aria-modal="true">
       <p style="font-weight:700;margin-bottom:14px;font-size:15px">Tu perfil</p>
       <input id="perfil-nombre-input" type="text" class="modal-prompt-input" placeholder="Ej: Nico, Mamá, Papá…" maxlength="20" style="display:block;margin:0 0 16px" />
-      <div class="modal-botones">
+      <div class="cat-config-color-fila">
+        <span class="cat-config-dot" id="perfil-color-dot"></span>
+        <span style="flex:1;font-size:13px;color:var(--gris-osc)">Tu color</span>
+        <button type="button" id="perfil-color-btn" class="btn-secundario" style="font-size:13px;padding:6px 16px">Cambiar</button>
+      </div>
+      <div class="modal-botones" style="margin-top:20px">
         <button type="button" id="perfil-cancelar" class="btn-secundario">Cancelar</button>
         <button type="button" id="perfil-guardar" class="btn-primary">Guardar</button>
       </div>
@@ -447,6 +452,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=64"></script>
+  <script src="app.js?v=65"></script>
 </body>
 </html>

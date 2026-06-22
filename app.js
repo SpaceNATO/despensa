@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.64';
+const APP_VERSION = '0.65';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -369,7 +369,7 @@ const inputCategoria = document.getElementById('categoria');
 // Registra un consumo y descuenta del stock si ese producto se controla
 function registrarConsumo(producto, cantidad, unidad, categoria) {
   const autor = usuarioNombre();
-  const c = { id: uid(), producto, cantidad, unidad, categoria, fecha: new Date().toISOString(), comprado: false, ...(autor && { autor }) };
+  const c = { id: uid(), producto, cantidad, unidad, categoria, fecha: new Date().toISOString(), comprado: false, ...(autor && { autor, autorColor: usuarioColor() }) };
   if (enCasa()) {
     nubeAgregarConsumo(c);
     if (datos.stock[producto]) {
@@ -512,6 +512,11 @@ function guardarUsuarioNombre(n) {
   const t = n.trim();
   if (t) localStorage.setItem('despensa_usuario_nombre', t);
   else localStorage.removeItem('despensa_usuario_nombre');
+}
+function usuarioColor() { return localStorage.getItem('despensa_usuario_color') || colorActual(); }
+function guardarUsuarioColor(c) {
+  if (c) localStorage.setItem('despensa_usuario_color', c);
+  else localStorage.removeItem('despensa_usuario_color');
 }
 function categoriasEfectivas() {
   const ov = catOverrides();
@@ -693,7 +698,7 @@ function renderUltimos() {
           <span class="consumo-cat">${escapeHtml(c.categoria || '')}</span>
           <span class="consumo-sep">·</span>
           <span class="consumo-tiempo">${tiempoRelativo(c.fecha)}</span>
-          ${c.autor ? `<span class="consumo-sep">·</span><span class="consumo-autor">${escapeHtml(c.autor.charAt(0).toUpperCase())}</span><span class="consumo-autor-nombre">${escapeHtml(c.autor)}</span>` : ''}
+          ${c.autor ? `<span class="consumo-sep">·</span><span class="consumo-autor"${c.autorColor ? ` style="background:${escapeHtml(c.autorColor)}"` : ''}>${escapeHtml(c.autor.charAt(0).toUpperCase())}</span><span class="consumo-autor-nombre">${escapeHtml(c.autor)}</span>` : ''}
         </div>
       </div>
       <div class="consumo-acciones">
@@ -2472,6 +2477,7 @@ gestorOverlay.addEventListener('click', e => { if (e.target === gestorOverlay) g
 function renderAjustes() {
   document.getElementById('ajustes-version').textContent = 'Mi Despensa ' + APP_VERSION;
   document.getElementById('perfil-avatar').textContent = usuarioInicial();
+  document.getElementById('perfil-avatar').style.background = usuarioColor();
   document.getElementById('perfil-nombre').textContent = usuarioNombreDisplay();
   renderSwatches('set-principal', COLORES, colorActual(), (c) => {
     const preset = COLORES.find(x => x.c === c);
@@ -2494,17 +2500,27 @@ document.getElementById('btn-ajustes').addEventListener('click', abrirAjustes);
 document.getElementById('ajustes-cerrar').addEventListener('click', cerrarAjustes);
 
 // Perfil
+let _perfilColor = '';
 addTap(document.getElementById('btn-perfil'), () => {
   const inp = document.getElementById('perfil-nombre-input');
   inp.value = usuarioNombre();
+  _perfilColor = usuarioColor();
+  document.getElementById('perfil-color-dot').style.background = _perfilColor;
   document.getElementById('perfil-overlay').style.display = 'flex';
   setTimeout(() => inp.focus(), 60);
+});
+document.getElementById('perfil-color-btn').addEventListener('click', () => {
+  abrirRueda(_perfilColor, hex => {
+    _perfilColor = hex;
+    document.getElementById('perfil-color-dot').style.background = hex;
+  });
 });
 document.getElementById('perfil-cancelar').addEventListener('click', () => {
   document.getElementById('perfil-overlay').style.display = 'none';
 });
 document.getElementById('perfil-guardar').addEventListener('click', () => {
   guardarUsuarioNombre(document.getElementById('perfil-nombre-input').value);
+  guardarUsuarioColor(_perfilColor);
   document.getElementById('perfil-overlay').style.display = 'none';
   renderAjustes();
   toast('Perfil guardado');

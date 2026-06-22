@@ -875,6 +875,7 @@ canvas { margin: 12px 0; max-height: 320px; }
 /* Modal lista-item y cat-config: aparecen al tercio superior */
 .lista-item-overlay { align-items: flex-start; padding-top: min(28vh, 110px); }
 #cat-config-overlay { align-items: flex-start; padding-top: min(33vh, 130px); }
+#perfil-overlay { align-items: flex-start; padding-top: min(33vh, 130px); }
 .lista-item-form { display: flex; flex-direction: column; gap: 10px; margin: 12px 0 0; }
 .lista-item-row { display: flex; gap: 10px; }
 .lista-item-campo { display: flex; flex-direction: column; gap: 4px; flex: 1; }
