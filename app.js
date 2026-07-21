@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.67';
+const APP_VERSION = '0.68';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -88,7 +88,8 @@ function nubeSetCarrito(arr) { casaRef().collection('meta').doc('estado').set({ 
 function nubeConfirmarCompra(aComprar, cantidades) {
   const batch = fbDb.batch();
   for (const c of datos.consumos) {
-    if (!c.comprado && aComprar.has(c.producto)) batch.update(casaRef().collection('consumos').doc(c.id), { comprado: true });
+    // set(merge) en vez de update: si el doc no existiera, update haría fallar TODO el batch
+    if (!c.comprado && aComprar.has(c.producto)) batch.set(casaRef().collection('consumos').doc(c.id), { ...c, comprado: true }, { merge: true });
   }
   for (const prod of aComprar) {
     const st = datos.stock[prod] || {};
@@ -1163,29 +1164,29 @@ function actualizarProgreso() {
 function ejecutarConfirmarCompra(aComprar, cantidades) {
   if (enCasa()) {
     nubeConfirmarCompra(aComprar, cantidades);
-    seleccionados.clear();
-    toast('Compra confirmada');
-    return; // el listener actualiza todo
+  } else {
+    for (const c of datos.consumos) {
+      if (!c.comprado && aComprar.has(c.producto)) c.comprado = true;
+    }
+    // Repone el stock: usa la cantidad comprada editada, o el máximo registrado
+    for (const prod of aComprar) {
+      const st = datos.stock[prod];
+      const comprado = (cantidades && cantidades[prod] > 0) ? cantidades[prod] : Math.max((st && st.max) || 0, (st && st.minimo) || 0, 1);
+      if (!st) datos.stock[prod] = { actual: 0, minimo: 0, max: 0 };
+      const nuevoActual = (datos.stock[prod].actual || 0) + comprado;
+      datos.stock[prod].actual = nuevoActual;
+      datos.stock[prod].max = Math.max(datos.stock[prod].max || 0, nuevoActual);
+    }
+    datos.carrito = [];
+    guardarDatos();
   }
-  for (const c of datos.consumos) {
-    if (!c.comprado && aComprar.has(c.producto)) c.comprado = true;
-  }
-  // Repone el stock: usa la cantidad comprada editada, o el máximo registrado
-  for (const prod of aComprar) {
-    const st = datos.stock[prod];
-    const comprado = (cantidades && cantidades[prod] > 0) ? cantidades[prod] : Math.max((st && st.max) || 0, (st && st.minimo) || 0, 1);
-    if (!st) datos.stock[prod] = { actual: 0, minimo: 0, max: 0 };
-    const nuevoActual = (datos.stock[prod].actual || 0) + comprado;
-    datos.stock[prod].actual = nuevoActual;
-    datos.stock[prod].max = Math.max(datos.stock[prod].max || 0, nuevoActual);
-  }
+  // Limpieza de la lista local (extras, cantidades e ignorados) en ambos modos.
+  // En casa, además, el listener refresca consumos/stock cuando la nube responde.
   seleccionados.clear();
   listaExtras = listaExtras.filter(e => !aComprar.has(e.producto));
   listaIgnorados.clear();
   aComprar.forEach(p => listaCantidades.delete(p));
-  datos.carrito = [];
   guardarExtrasLocal(); guardarCantidadesLocal();
-  guardarDatos();
   toast('Compra confirmada');
   refrescarTodo();
 }
