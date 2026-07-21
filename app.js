@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.68';
+const APP_VERSION = '0.69';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -91,12 +91,20 @@ function nubeConfirmarCompra(aComprar, cantidades) {
     // set(merge) en vez de update: si el doc no existiera, update haría fallar TODO el batch
     if (!c.comprado && aComprar.has(c.producto)) batch.set(casaRef().collection('consumos').doc(c.id), { ...c, comprado: true }, { merge: true });
   }
+  const cat = catalogo();
   for (const prod of aComprar) {
     const st = datos.stock[prod] || {};
     const comprado = (cantidades && cantidades[prod] > 0) ? cantidades[prod] : Math.max(st.max || 0, st.minimo || 0, 1);
-    const nuevoActual = (st.actual || 0) + comprado;
-    const nuevoMax = Math.max(st.max || 0, nuevoActual);
-    batch.set(casaRef().collection('stock').doc(idStock(prod)), { producto: prod, actual: nuevoActual, max: nuevoMax }, { merge: true });
+    // increment() (suma atómica en el servidor), igual que al consumir: evita
+    // que un valor absoluto pise incrementos recientes aún no sincronizados.
+    const nuevoMax = Math.max(st.max || 0, (st.actual || 0) + comprado);
+    const info = cat[prod] || {};
+    const data = { producto: prod, actual: fv().increment(comprado), max: nuevoMax };
+    const unidad = st.unidad || info.unidad;
+    const categoria = st.categoria || info.categoria;
+    if (unidad) data.unidad = unidad;       // para que el producto se renderice bien en Stock
+    if (categoria) data.categoria = categoria;
+    batch.set(casaRef().collection('stock').doc(idStock(prod)), data, { merge: true });
   }
   batch.set(casaRef().collection('meta').doc('estado'), { carrito: [] }, { merge: true });
   batch.commit().catch(avisarErrorNube);
