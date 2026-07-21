@@ -2,7 +2,7 @@
 // Todos los datos viven en el teléfono (localStorage). Sin servidores.
 
 const STORAGE_KEY = 'despensa_v1';
-const APP_VERSION = '0.69';
+const APP_VERSION = '0.70';
 
 // Estructura: { consumos: [...], stock: { producto: {actual, minimo} }, carrito: [producto] }
 function cargarDatos() {
@@ -91,19 +91,16 @@ function nubeConfirmarCompra(aComprar, cantidades) {
     // set(merge) en vez de update: si el doc no existiera, update haría fallar TODO el batch
     if (!c.comprado && aComprar.has(c.producto)) batch.set(casaRef().collection('consumos').doc(c.id), { ...c, comprado: true }, { merge: true });
   }
-  const cat = catalogo();
   for (const prod of aComprar) {
     const st = datos.stock[prod] || {};
     const comprado = (cantidades && cantidades[prod] > 0) ? cantidades[prod] : Math.max(st.max || 0, st.minimo || 0, 1);
     // increment() (suma atómica en el servidor), igual que al consumir: evita
     // que un valor absoluto pise incrementos recientes aún no sincronizados.
     const nuevoMax = Math.max(st.max || 0, (st.actual || 0) + comprado);
-    const info = cat[prod] || {};
+    const info = infoProductoLista(prod);
     const data = { producto: prod, actual: fv().increment(comprado), max: nuevoMax };
-    const unidad = st.unidad || info.unidad;
-    const categoria = st.categoria || info.categoria;
-    if (unidad) data.unidad = unidad;       // para que el producto se renderice bien en Stock
-    if (categoria) data.categoria = categoria;
+    if (info.unidad) data.unidad = info.unidad;       // para que el producto se renderice bien en Stock
+    if (info.categoria) data.categoria = info.categoria;
     batch.set(casaRef().collection('stock').doc(idStock(prod)), data, { merge: true });
   }
   batch.set(casaRef().collection('meta').doc('estado'), { carrito: [] }, { merge: true });
@@ -267,6 +264,17 @@ function catalogo() {
     cat[c.producto] = { unidad: c.unidad, categoria: c.categoria };
   }
   return cat;
+}
+
+// Mejor info (unidad/categoría) disponible de un producto: consumos, ítem extra o stock.
+function infoProductoLista(prod) {
+  const c = catalogo()[prod] || {};
+  const e = (typeof listaExtras !== 'undefined' && listaExtras.find(x => x.producto === prod)) || {};
+  const st = (datos.stock && datos.stock[prod]) || {};
+  return {
+    unidad: c.unidad || e.unidad || st.unidad || '',
+    categoria: c.categoria || e.categoria || st.categoria || 'Otros',
+  };
 }
 
 // Diccionario incorporado: productos comunes con su unidad y categoría sugeridas.
@@ -817,9 +825,10 @@ function refStock(st) { return Math.max(st.max || 0, st.minimo || 0, 1); }
 function renderStock() {
   const cont = document.getElementById('lista-stock');
   const cat = catalogo();
-  // También mostrar productos cargados manualmente (sin consumos registrados)
+  // También mostrar TODO producto que tenga stock, aunque no tenga consumos
+  // registrados (ítems comprados desde la lista, cargados a mano, etc.)
   for (const [prod, st] of Object.entries(datos.stock)) {
-    if (!cat[prod] && st.unidad) cat[prod] = { unidad: st.unidad, categoria: st.categoria || 'Otros' };
+    if (!cat[prod]) cat[prod] = { unidad: st.unidad || '', categoria: st.categoria || 'Otros' };
   }
   const nombres = Object.keys(cat);
   const alerta = document.getElementById('stock-alerta');
@@ -1181,6 +1190,9 @@ function ejecutarConfirmarCompra(aComprar, cantidades) {
       const st = datos.stock[prod];
       const comprado = (cantidades && cantidades[prod] > 0) ? cantidades[prod] : Math.max((st && st.max) || 0, (st && st.minimo) || 0, 1);
       if (!st) datos.stock[prod] = { actual: 0, minimo: 0, max: 0 };
+      const info = infoProductoLista(prod);
+      if (!datos.stock[prod].unidad && info.unidad) datos.stock[prod].unidad = info.unidad;
+      if (!datos.stock[prod].categoria && info.categoria) datos.stock[prod].categoria = info.categoria;
       const nuevoActual = (datos.stock[prod].actual || 0) + comprado;
       datos.stock[prod].actual = nuevoActual;
       datos.stock[prod].max = Math.max(datos.stock[prod].max || 0, nuevoActual);
